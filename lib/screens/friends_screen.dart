@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_constants.dart';
 import '../services/friend_service.dart';
 import '../services/auth_service.dart';
@@ -24,12 +25,49 @@ class _FriendsScreenState extends State<FriendsScreen>
   List<Map<String, dynamic>> _pendingRequests = [];
   List<FriendSuggestion> _suggestions = [];
   bool _isLoading = true;
+  
+  RealtimeChannel? _friendsChannel;
+  RealtimeChannel? _requestsChannel;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadData();
+    _setupRealtimeSubscriptions();
+  }
+  
+  void _setupRealtimeSubscriptions() {
+    final userId = _authService.currentUser?.id;
+    if (userId == null) return;
+
+    // Subscribe to friends table changes
+    _friendsChannel = Supabase.instance.client
+        .channel('friends_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'friends',
+          callback: (payload) {
+            debugPrint('Friends changed: ${payload.eventType}');
+            _loadData(); // Reload when friends change
+          },
+        )
+        .subscribe();
+
+    // Subscribe to friend_requests table changes
+    _requestsChannel = Supabase.instance.client
+        .channel('friend_requests_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'friend_requests',
+          callback: (payload) {
+            debugPrint('Friend requests changed: ${payload.eventType}');
+            _loadData(); // Reload when requests change
+          },
+        )
+        .subscribe();
   }
 
   Future<void> _loadData() async {
@@ -213,6 +251,8 @@ class _FriendsScreenState extends State<FriendsScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _friendsChannel?.unsubscribe();
+    _requestsChannel?.unsubscribe();
     super.dispose();
   }
 

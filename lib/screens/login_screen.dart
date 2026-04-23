@@ -324,15 +324,24 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.signIn(
+      final response = await _authService.signIn(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Timeout: Đăng nhập quá lâu, vui lòng thử lại');
+        },
       );
+
+      print('Login response: ${response.user?.id}');
+      print('Login session: ${response.session?.accessToken != null}');
 
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/chats');
       }
     } catch (e) {
+      print('Login error: $e');
       if (mounted) {
         _showError('Đăng nhập thất bại: ${e.toString()}');
       }

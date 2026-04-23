@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_constants.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
@@ -25,6 +26,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Timer? _refreshTimer;
   String _lastMessageText = '';
   String _lastMessageTime = '';
+  RealtimeChannel? _usersChannel;
 
   @override
   void initState() {
@@ -32,6 +34,25 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _loadConversations();
     _startAutoRefresh();
     _userService.startOnlineStatusHeartbeat();
+    _setupRealtimeSubscription();
+  }
+  
+  void _setupRealtimeSubscription() {
+    // Subscribe to users table changes (for online status updates)
+    _usersChannel = Supabase.instance.client
+        .channel('users_online_status')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'users',
+          callback: (payload) {
+            // When any user's online status changes, reload conversations
+            if (payload.newRecord['is_online'] != null) {
+              _loadConversations();
+            }
+          },
+        )
+        .subscribe();
   }
   
   void _startAutoRefresh() {
@@ -46,78 +67,88 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Future<void> _loadConversations() async {
     try {
       final userId = _authService.currentUser?.id;
-      if (userId == null) return;
+      if (userId == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+        return;
+      }
 
-      final conversations = await _chatService.getConversations(userId);
+      final conversations = await _chatService.getConversations(userId)
+          .timeout(
+            const Duration(seconds: 5),
+            onTimeout: () {
+              debugPrint('⏱️ Timeout loading conversations');
+              return [];
+            },
+          );
       
       // Load user details for each conversation
       final conversationsWithUsers = <Map<String, dynamic>>[];
       
       for (var conv in conversations) {
-        final conversationId = conv['conversation_id'];
-        
-        // Get last message
-        final messages = await _chatService.getMessages(conversationId);
-        final lastMessage = messages.isNotEmpty ? messages.last : null;
-        
-        // Get other participants (not current user)
-        final participants = await _getConversationParticipants(conversationId, userId);
-        
-        if (participants.isNotEmpty) {
-          final otherUser = participants.first;
+        try {
+          final conversationId = conv['conversation_id'];
           
-          // Format last message with sender name
-          String lastMessageText = 'Bắt đầu trò chuyện';
-          if (lastMessage != null) {
-            final senderId = lastMessage['sender_id'] as String?;
-            final messageText = lastMessage['text'] as String? ?? '';
+          // Get last message
+          final messages = await _chatService.getMessages(conversationId)
+              .timeout(const Duration(seconds: 3), onTimeout: () => []);
+          final lastMessage = messages.isNotEmpty ? messages.last : null;
+          
+          // Get other participants (not current user)
+          final participants = await _getConversationParticipants(conversationId, userId)
+              .timeout(const Duration(seconds: 3), onTimeout: () => []);
+          
+          if (participants.isNotEmpty) {
+            final otherUser = participants.first;
             
-            if (senderId != null && senderId == userId) {
-              // Current user sent the message
-              lastMessageText = 'Bạn: $messageText';
-            } else {
-              // Other user sent the message
-              lastMessageText = messageText;
+            // Format last message with sender name
+            String lastMessageText = 'Bắt đầu trò chuyện';
+            if (lastMessage != null) {
+              final senderId = lastMessage['sender_id'] as String?;
+              final messageText = lastMessage['text'] as String? ?? '';
+              
+              if (senderId != null && senderId == userId) {
+                // Current user sent the message
+                lastMessageText = 'Bạn: $messageText';
+              } else {
+                // Other user sent the message
+                lastMessageText = messageText;
+              }
             }
+            
+            conversationsWithUsers.add({
+              'id': conversationId,
+              'name': otherUser['full_name'] ?? 'Unknown',
+              'avatar': otherUser['avatar_url'] ?? AppConstants.defaultAvatar,
+              'lastMessage': lastMessageText,
+              'time': _formatTime(lastMessage?['created_at']),
+              'unreadCount': conv['unread_count'] ?? 0,
+              'isOnline': otherUser['is_online'] ?? false,
+              'otherUserId': otherUser['id'],
+            });
           }
-          
-          conversationsWithUsers.add({
-            'id': conversationId,
-            'name': otherUser['full_name'] ?? 'Unknown',
-            'avatar': otherUser['avatar_url'] ?? AppConstants.defaultAvatar,
-            'lastMessage': lastMessageText,
-            'time': _formatTime(lastMessage?['created_at']),
-            'unreadCount': conv['unread_count'] ?? 0,
-            'isOnline': otherUser['is_online'] ?? false,
-            'otherUserId': otherUser['id'],
-          });
+        } catch (e) {
+          debugPrint('❌ Error loading conversation: $e');
+          // Continue with next conversation
         }
       }
 
-      // Only update if data changed
-      final newLastMessage = conversationsWithUsers.isNotEmpty 
-          ? conversationsWithUsers.first['lastMessage'] 
-          : '';
-      final newLastTime = conversationsWithUsers.isNotEmpty 
-          ? conversationsWithUsers.first['time'] 
-          : '';
-      
-      if (newLastMessage != _lastMessageText || newLastTime != _lastMessageTime) {
-        _lastMessageText = newLastMessage;
-        _lastMessageTime = newLastTime;
-        
-        if (mounted) {
-          setState(() {
-            _conversations = conversationsWithUsers;
-            _isLoading = false;
-          });
-          debugPrint('✅ Chat list updated - new message detected');
-        }
+      // Always update state, even if no conversations
+      if (mounted) {
+        setState(() {
+          _conversations = conversationsWithUsers;
+          _isLoading = false;
+        });
+        debugPrint('✅ Chat list loaded: ${conversationsWithUsers.length} conversations');
       }
     } catch (e) {
       debugPrint('❌ Error loading conversations: $e');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _conversations = [];
+          _isLoading = false;
+        });
       }
     }
   }
@@ -321,6 +352,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void dispose() {
     _searchController.dispose();
     _refreshTimer?.cancel();
+    _usersChannel?.unsubscribe();
     _userService.stopOnlineStatusHeartbeat();
     super.dispose();
   }
