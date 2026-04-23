@@ -6,6 +6,7 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/chat_list_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/friends_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/chats': (context) => const ChatListScreen(),
+        '/friends': (context) => const FriendsScreen(),
         '/profile': (context) => const ProfileScreen(),
       },
     );

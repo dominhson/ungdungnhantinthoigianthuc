@@ -31,6 +31,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     super.initState();
     _loadConversations();
     _startAutoRefresh();
+    _userService.startOnlineStatusHeartbeat();
   }
   
   void _startAutoRefresh() {
@@ -320,6 +321,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
   void dispose() {
     _searchController.dispose();
     _refreshTimer?.cancel();
+    _userService.stopOnlineStatusHeartbeat();
     super.dispose();
   }
 
@@ -386,7 +388,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 color: const Color(0xFF0d1117),
                 borderRadius: BorderRadius.circular(4),
                 border: Border.all(
-                  color: const Color(0xFF94a3b8).withOpacity(0.15),
+                  color: const Color(0xFF94a3b8).withValues(alpha: 0.15),
                 ),
               ),
               child: const Icon(
@@ -409,7 +411,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         color: const Color(0xFF0d1117),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
-          color: const Color(0xFF94a3b8).withOpacity(0.15),
+          color: const Color(0xFF94a3b8).withValues(alpha: 0.15),
         ),
       ),
       child: TextField(
@@ -569,7 +571,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         color: const Color(0xFF0d1117),
         border: Border(
           top: BorderSide(
-            color: const Color(0xFF94a3b8).withOpacity(0.15),
+            color: const Color(0xFF94a3b8).withValues(alpha: 0.15),
           ),
         ),
       ),
@@ -580,6 +582,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
             _selectedIndex = index;
           });
           if (index == 1) {
+            Navigator.pushNamed(context, '/friends');
+          } else if (index == 2) {
             Navigator.pushNamed(context, '/profile');
           }
         },
@@ -593,6 +597,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
             icon: Icon(Icons.chat_bubble_outline),
             activeIcon: Icon(Icons.chat_bubble),
             label: 'Tin nhắn',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline),
+            activeIcon: Icon(Icons.people),
+            label: 'Bạn bè',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),

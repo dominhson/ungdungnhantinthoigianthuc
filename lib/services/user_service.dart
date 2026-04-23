@@ -1,7 +1,38 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:async';
 
 class UserService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  Timer? _heartbeatTimer;
+
+  // Start heartbeat to keep online status updated
+  void startOnlineStatusHeartbeat() {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+
+    // Update status immediately
+    updateOnlineStatus(userId, true);
+
+    // Update every 30 seconds
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId != null) {
+        updateOnlineStatus(currentUserId, true);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  // Stop heartbeat
+  void stopOnlineStatusHeartbeat() {
+    _heartbeatTimer?.cancel();
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId != null) {
+      updateOnlineStatus(userId, false);
+    }
+  }
 
   // Get user profile
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {

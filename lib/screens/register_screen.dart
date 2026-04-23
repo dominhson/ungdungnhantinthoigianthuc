@@ -534,7 +534,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () {
-              Navigator.pop(context);
+              Navigator.pushReplacementNamed(context, '/login');
             },
             child: Container(
               padding: const EdgeInsets.only(bottom: 2),
