@@ -6,6 +6,11 @@ class ConversationModel {
   final String? lastMessageText;
   final DateTime? lastMessageTime;
   final int unreadCount;
+  final bool isGroup;
+  final String? name;
+  final String? avatarUrl;
+  final String? createdBy;
+  final String? description;
 
   ConversationModel({
     required this.id,
@@ -15,6 +20,11 @@ class ConversationModel {
     this.lastMessageText,
     this.lastMessageTime,
     this.unreadCount = 0,
+    this.isGroup = false,
+    this.name,
+    this.avatarUrl,
+    this.createdBy,
+    this.description,
   });
 
   factory ConversationModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +40,11 @@ class ConversationModel {
           ? DateTime.parse(json['last_message_time'] as String)
           : null,
       unreadCount: json['unread_count'] as int? ?? 0,
+      isGroup: json['is_group'] as bool? ?? false,
+      name: json['name'] as String?,
+      avatarUrl: json['avatar_url'] as String?,
+      createdBy: json['created_by'] as String?,
+      description: json['description'] as String?,
     );
   }
 
@@ -42,6 +57,11 @@ class ConversationModel {
       'last_message_text': lastMessageText,
       'last_message_time': lastMessageTime?.toIso8601String(),
       'unread_count': unreadCount,
+      'is_group': isGroup,
+      'name': name,
+      'avatar_url': avatarUrl,
+      'created_by': createdBy,
+      'description': description,
     };
   }
 
@@ -53,6 +73,11 @@ class ConversationModel {
     String? lastMessageText,
     DateTime? lastMessageTime,
     int? unreadCount,
+    bool? isGroup,
+    String? name,
+    String? avatarUrl,
+    String? createdBy,
+    String? description,
   }) {
     return ConversationModel(
       id: id ?? this.id,
@@ -62,6 +87,11 @@ class ConversationModel {
       lastMessageText: lastMessageText ?? this.lastMessageText,
       lastMessageTime: lastMessageTime ?? this.lastMessageTime,
       unreadCount: unreadCount ?? this.unreadCount,
+      isGroup: isGroup ?? this.isGroup,
+      name: name ?? this.name,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      createdBy: createdBy ?? this.createdBy,
+      description: description ?? this.description,
     );
   }
 }

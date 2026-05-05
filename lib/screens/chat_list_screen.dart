@@ -6,6 +6,8 @@ import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/user_service.dart';
 import 'chat_screen.dart';
+import 'create_group_screen.dart';
+import 'search_screen.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -24,8 +26,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
   List<Map<String, dynamic>> _conversations = [];
   bool _isLoading = true;
   Timer? _refreshTimer;
-  String _lastMessageText = '';
-  String _lastMessageTime = '';
   RealtimeChannel? _usersChannel;
 
   @override
@@ -89,44 +89,83 @@ class _ChatListScreenState extends State<ChatListScreen> {
       for (var conv in conversations) {
         try {
           final conversationId = conv['conversation_id'];
+          final conversationData = conv['conversations'] as Map<String, dynamic>?;
+          
+          // Check if it's a group
+          final isGroup = conversationData?['is_group'] == true;
           
           // Get last message
           final messages = await _chatService.getMessages(conversationId)
               .timeout(const Duration(seconds: 3), onTimeout: () => []);
           final lastMessage = messages.isNotEmpty ? messages.last : null;
           
-          // Get other participants (not current user)
-          final participants = await _getConversationParticipants(conversationId, userId)
-              .timeout(const Duration(seconds: 3), onTimeout: () => []);
-          
-          if (participants.isNotEmpty) {
-            final otherUser = participants.first;
+          if (isGroup) {
+            // Handle group conversation
+            final groupName = conversationData?['name'] ?? 'Nhóm';
+            final groupAvatar = conversationData?['avatar_url'];
             
-            // Format last message with sender name
+            // Format last message
             String lastMessageText = 'Bắt đầu trò chuyện';
             if (lastMessage != null) {
               final senderId = lastMessage['sender_id'] as String?;
               final messageText = lastMessage['text'] as String? ?? '';
               
               if (senderId != null && senderId == userId) {
-                // Current user sent the message
                 lastMessageText = 'Bạn: $messageText';
               } else {
-                // Other user sent the message
-                lastMessageText = messageText;
+                // Get sender name
+                final senderData = lastMessage['sender'] as Map<String, dynamic>?;
+                final senderName = senderData?['full_name'] ?? 'Unknown';
+                lastMessageText = '$senderName: $messageText';
               }
             }
             
             conversationsWithUsers.add({
               'id': conversationId,
-              'name': otherUser['full_name'] ?? 'Unknown',
-              'avatar': otherUser['avatar_url'] ?? AppConstants.defaultAvatar,
+              'name': groupName,
+              'avatar': groupAvatar ?? AppConstants.defaultAvatar,
               'lastMessage': lastMessageText,
               'time': _formatTime(lastMessage?['created_at']),
               'unreadCount': conv['unread_count'] ?? 0,
-              'isOnline': otherUser['is_online'] ?? false,
-              'otherUserId': otherUser['id'],
+              'isOnline': false,
+              'isGroup': true,
+              'otherUserId': null,
             });
+          } else {
+            // Handle 1-1 conversation
+            final participants = await _getConversationParticipants(conversationId, userId)
+                .timeout(const Duration(seconds: 3), onTimeout: () => []);
+            
+            if (participants.isNotEmpty) {
+              final otherUser = participants.first;
+              
+              // Format last message with sender name
+              String lastMessageText = 'Bắt đầu trò chuyện';
+              if (lastMessage != null) {
+                final senderId = lastMessage['sender_id'] as String?;
+                final messageText = lastMessage['text'] as String? ?? '';
+                
+                if (senderId != null && senderId == userId) {
+                  // Current user sent the message
+                  lastMessageText = 'Bạn: $messageText';
+                } else {
+                  // Other user sent the message
+                  lastMessageText = messageText;
+                }
+              }
+              
+              conversationsWithUsers.add({
+                'id': conversationId,
+                'name': otherUser['full_name'] ?? 'Unknown',
+                'avatar': otherUser['avatar_url'] ?? AppConstants.defaultAvatar,
+                'lastMessage': lastMessageText,
+                'time': _formatTime(lastMessage?['created_at']),
+                'unreadCount': conv['unread_count'] ?? 0,
+                'isOnline': otherUser['is_online'] ?? false,
+                'isGroup': false,
+                'otherUserId': otherUser['id'],
+              });
+            }
           }
         } catch (e) {
           debugPrint('❌ Error loading conversation: $e');
@@ -174,7 +213,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       // Get user details
       return await _userService.getUsersByIds(participantIds);
     } catch (e) {
-      print('Error getting participants: $e');
+      debugPrint('Error getting participants: $e');
       return [];
     }
   }
@@ -339,7 +378,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ).then((_) => _loadConversations());
       }
     } catch (e) {
-      print('Error creating conversation: $e');
+      debugPrint('Error creating conversation: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi: ${e.toString()}')),
@@ -387,10 +426,43 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       ),
       bottomNavigationBar: _buildBottomNav(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showNewChatDialog,
-        backgroundColor: const Color(0xFF1e3a8a),
-        child: const Icon(Icons.edit, color: Colors.white),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Create Group button
+          FloatingActionButton(
+            heroTag: 'createGroup',
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CreateGroupScreen(),
+                ),
+              );
+              if (result != null) {
+                _loadConversations();
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Nhóm đã được tạo thành công!'),
+                      backgroundColor: Color(0xFF10b981),
+                    ),
+                  );
+                }
+              }
+            },
+            backgroundColor: const Color(0xFF059669),
+            child: const Icon(Icons.group_add, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          // New Chat button
+          FloatingActionButton(
+            heroTag: 'newChat',
+            onPressed: _showNewChatDialog,
+            backgroundColor: const Color(0xFF1e3a8a),
+            child: const Icon(Icons.edit, color: Colors.white),
+          ),
+        ],
       ),
     );
   }
@@ -409,26 +481,59 @@ class _ChatListScreenState extends State<ChatListScreen> {
               color: Color(0xFFe2e8f0),
             ),
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/profile');
-            },
-            icon: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFF0d1117),
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: const Color(0xFF94a3b8).withValues(alpha: 0.15),
+          Row(
+            children: [
+              // Search button
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SearchScreen(),
+                    ),
+                  );
+                },
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0d1117),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: const Color(0xFF94a3b8).withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.search,
+                    color: Color(0xFF94a3b8),
+                    size: 20,
+                  ),
                 ),
               ),
-              child: const Icon(
-                Icons.person_outline,
-                color: Color(0xFF94a3b8),
-                size: 20,
+              const SizedBox(width: 8),
+              // Profile button
+              IconButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/profile');
+                },
+                icon: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0d1117),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: const Color(0xFF94a3b8).withValues(alpha: 0.15),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: Color(0xFF94a3b8),
+                    size: 20,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -471,6 +576,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   Widget _buildChatItem(Map<String, dynamic> chat) {
+    final isGroup = chat['isGroup'] == true;
+    
     return InkWell(
       onTap: () {
         Navigator.push(
@@ -482,6 +589,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               isOnline: chat['isOnline'],
               conversationId: chat['id'],
               otherUserId: chat['otherUserId'],
+              isGroup: isGroup,
             ),
           ),
         ).then((_) => _loadConversations());
@@ -490,17 +598,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Row(
           children: [
-            // Avatar with online indicator
+            // Avatar with online indicator or group icon
             Stack(
               children: [
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: const Color(0xFF0d1117),
-                  backgroundImage: chat['avatar'].startsWith('http')
+                  backgroundImage: !isGroup && chat['avatar'].startsWith('http')
                       ? NetworkImage(chat['avatar']) as ImageProvider
-                      : AssetImage(chat['avatar']),
+                      : null,
+                  child: isGroup
+                      ? const Icon(
+                          Icons.group,
+                          color: Color(0xFF94a3b8),
+                          size: 28,
+                        )
+                      : (chat['avatar'].startsWith('http')
+                          ? null
+                          : Image.asset(chat['avatar'])),
                 ),
-                if (chat['isOnline'])
+                if (!isGroup && chat['isOnline'])
                   Positioned(
                     right: 0,
                     bottom: 0,
@@ -528,12 +645,29 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        chat['name'],
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFFe2e8f0),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                chat['name'],
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFe2e8f0),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isGroup) ...[
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.people,
+                                size: 14,
+                                color: Color(0xFF94a3b8),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                       Text(

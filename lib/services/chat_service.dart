@@ -17,7 +17,12 @@ class ChatService {
           conversations!inner(
             id,
             created_at,
-            updated_at
+            updated_at,
+            is_group,
+            name,
+            avatar_url,
+            description,
+            created_by
           )
         ''')
         .eq('user_id', userId)
@@ -48,6 +53,7 @@ class ChatService {
     String type = 'text',
     String? mediaUrl,
     int? duration,
+    String? replyToMessageId,
   }) async {
     final message = {
       'conversation_id': conversationId,
@@ -56,6 +62,7 @@ class ChatService {
       'type': type,
       'media_url': mediaUrl,
       'duration': duration,
+      'reply_to_message_id': replyToMessageId,
       'created_at': DateTime.now().toIso8601String(),
     };
 

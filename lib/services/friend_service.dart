@@ -185,8 +185,8 @@ class FriendService {
     try {
       final response = await _supabase
           .rpc('get_friend_suggestions', params: {
-            'current_user_id': currentUserId,
-            'limit_count': limit,
+            'p_current_user_id': currentUserId,
+            'p_limit_count': limit,
           });
 
       return (response as List)
