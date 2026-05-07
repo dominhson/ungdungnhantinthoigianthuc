@@ -1,0 +1,246 @@
+@startuml Online Status Sequence
+title Sequence Diagram - Quản lý trạng thái Online/Offline
+
+hide footbox
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+
+skinparam actor {
+  BorderColor Black
+}
+skinparam boundary {
+  BorderColor Black
+}
+skinparam control {
+  BorderColor Black
+}
+skinparam entity {
+  BorderColor Black
+}
+
+actor "Người dùng A" as UserA
+actor "Bạn bè (User B)" as UserB
+boundary ": MainScreen" as MainUI
+control ": UserService" as UserCtrl
+control ": HeartbeatTimer" as Timer
+control ": RealtimeChannel" as Realtime
+entity ": users" as UserDB
+
+activate UserA
+activate UserB
+
+' ===== ĐĂNG NHẬP & KHỞI TẠO =====
+skinparam ArrowColor DeepSkyBlue
+UserA -> MainUI: 1. Đăng nhập thành công
+activate MainUI
+
+skinparam ArrowColor DeepSkyBlue
+MainUI -> UserCtrl: 2. initializeOnlineStatus()
+activate UserCtrl
+
+skinparam ArrowColor DeepSkyBlue
+UserCtrl -> UserDB: 3. UPDATE users\nSET is_online = true,\nlast_seen = NOW()
+activate UserDB
+
+skinparam ArrowColor Red
+UserDB --> UserCtrl: 4. Updated
+deactivate UserDB
+
+skinparam ArrowColor DeepSkyBlue
+UserCtrl -> Timer: 5. startHeartbeat(interval: 30s)
+activate Timer
+
+skinparam ArrowColor Red
+Timer --> UserCtrl: 6. Timer started
+deactivate Timer
+
+skinparam ArrowColor Red
+UserCtrl --> MainUI: 7. Online status initialized
+deactivate UserCtrl
+
+skinparam ArrowColor Red
+MainUI --> UserA: 8. Hiển thị trạng thái online
+
+' ===== SUBSCRIBE FRIEND STATUS =====
+skinparam ArrowColor DeepSkyBlue
+MainUI -> Realtime: 9. subscribeToFriendStatus()
+activate Realtime
+
+skinparam ArrowColor DeepSkyBlue
+Realtime -> UserDB: 10. LISTEN ON users table\nFOR UPDATE events
+activate UserDB
+
+skinparam ArrowColor Red
+UserDB --> Realtime: 11. Subscription active
+deactivate UserDB
+
+skinparam ArrowColor Red
+Realtime --> MainUI: 12. Listening to friend status
+deactivate Realtime
+
+' ===== HEARTBEAT LOOP =====
+loop Heartbeat mỗi 30 giây
+
+  skinparam ArrowColor DeepSkyBlue
+  Timer -> UserCtrl: 13. heartbeat()
+  activate Timer
+  activate UserCtrl
+  
+  skinparam ArrowColor DeepSkyBlue
+  UserCtrl -> UserDB: 14. UPDATE users\nSET last_seen = NOW()
+  activate UserDB
+  
+  group Trường hợp thành công
+    
+    skinparam ArrowColor Red
+    UserDB --> UserCtrl: 15. Updated
+    deactivate UserDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    UserCtrl -> Realtime: 16. broadcast('status', {user_id, is_online: true})
+    activate Realtime
+    
+    skinparam ArrowColor Red
+    Realtime --> UserB: 17. Status update event
+    
+    skinparam ArrowColor Red
+    UserB -> UserB: 18. Cập nhật UI:\nHiển thị chấm xanh 🟢
+    
+    deactivate Realtime
+    
+    skinparam ArrowColor Red
+    UserCtrl --> Timer: 19. Heartbeat success
+    deactivate UserCtrl
+    deactivate Timer
+    
+  end
+  
+  group Trường hợp mất kết nối
+    
+    skinparam ArrowColor Red
+    UserDB --> UserCtrl: 15. Error: Connection timeout
+    deactivate UserDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    UserCtrl -> UserDB: 16. UPDATE users\nSET is_online = false
+    activate UserDB
+    
+    skinparam ArrowColor Red
+    UserDB --> UserCtrl: 17. Updated
+    deactivate UserDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    UserCtrl -> Realtime: 18. broadcast('status', {user_id, is_online: false})
+    activate Realtime
+    
+    skinparam ArrowColor Red
+    Realtime --> UserB: 19. Status update event
+    
+    skinparam ArrowColor Red
+    UserB -> UserB: 20. Cập nhật UI:\nHiển thị chấm xám ⚫\n"Hoạt động X phút trước"
+    
+    deactivate Realtime
+    
+    ' ===== TỰ ĐỘNG KẾT NỐI LẠI =====
+    loop Thử kết nối lại
+      
+      skinparam ArrowColor DeepSkyBlue
+      UserCtrl -> UserDB: 21. Reconnect attempt
+      activate UserDB
+      
+      alt Kết nối thành công
+        
+        skinparam ArrowColor Red
+        UserDB --> UserCtrl: 22. Connected
+        deactivate UserDB
+        
+        skinparam ArrowColor DeepSkyBlue
+        UserCtrl -> UserDB: 23. UPDATE users\nSET is_online = true
+        activate UserDB
+        
+        skinparam ArrowColor Red
+        UserDB --> UserCtrl: 24. Updated
+        deactivate UserDB
+        
+        skinparam ArrowColor DeepSkyBlue
+        UserCtrl -> Realtime: 25. broadcast('status', {user_id, is_online: true})
+        activate Realtime
+        
+        skinparam ArrowColor Red
+        Realtime --> UserB: 26. Status update event
+        
+        skinparam ArrowColor Red
+        UserB -> UserB: 27. Cập nhật UI:\nHiển thị chấm xanh 🟢
+        
+        deactivate Realtime
+        
+        break
+        
+      else Kết nối thất bại
+        
+        skinparam ArrowColor Red
+        UserDB --> UserCtrl: 22. Connection failed
+        deactivate UserDB
+        
+        skinparam ArrowColor DeepSkyBlue
+        UserCtrl -> UserCtrl: 23. Wait 5 seconds
+        
+      end
+      
+    end
+    
+    deactivate UserCtrl
+    deactivate Timer
+    
+  end
+
+end
+
+' ===== ĐĂNG XUẤT THỦ CÔNG =====
+group Đăng xuất
+
+  skinparam ArrowColor DeepSkyBlue
+  UserA -> MainUI: 28. Click 'Đăng xuất'
+  
+  skinparam ArrowColor DeepSkyBlue
+  MainUI -> Timer: 29. stopHeartbeat()
+  activate Timer
+  
+  skinparam ArrowColor Red
+  Timer --> MainUI: 30. Timer stopped
+  deactivate Timer
+  
+  skinparam ArrowColor DeepSkyBlue
+  MainUI -> UserCtrl: 31. updateOfflineStatus()
+  activate UserCtrl
+  
+  skinparam ArrowColor DeepSkyBlue
+  UserCtrl -> UserDB: 32. UPDATE users\nSET is_online = false,\nlast_seen = NOW()
+  activate UserDB
+  
+  skinparam ArrowColor Red
+  UserDB --> UserCtrl: 33. Updated
+  deactivate UserDB
+  
+  skinparam ArrowColor DeepSkyBlue
+  UserCtrl -> Realtime: 34. unsubscribeAll()
+  activate Realtime
+  
+  skinparam ArrowColor Red
+  Realtime --> UserCtrl: 35. Unsubscribed
+  deactivate Realtime
+  
+  skinparam ArrowColor Red
+  UserCtrl --> MainUI: 36. Offline status set
+  deactivate UserCtrl
+  
+  skinparam ArrowColor Red
+  MainUI --> UserA: 37. Chuyển về màn hình đăng nhập
+  deactivate MainUI
+
+end
+
+deactivate UserA
+deactivate UserB
+
+@enduml

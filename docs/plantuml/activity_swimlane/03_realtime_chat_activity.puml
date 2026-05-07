@@ -1,0 +1,80 @@
+@startuml Realtime Chat Activity Diagram
+!theme plain
+title Sơ đồ hoạt động: Chat thời gian thực
+
+|Người dùng|
+start
+:Mở cuộc trò chuyện;
+
+|Hệ thống|
+:Tải tin nhắn;
+:Thiết lập Realtime channel;
+:Hiển thị tin nhắn;
+
+|Người dùng|
+:Chọn hành động;
+
+if (Hành động) then (Gửi tin nhắn)
+  
+  |Người dùng|
+  :Nhập tin nhắn;
+  :Nhấn "Gửi";
+  
+  |Hệ thống|
+  :Lưu tin nhắn vào database;
+  :Broadcast qua Realtime;
+  note right
+    Gửi message_id
+    qua WebSocket
+  end note
+  
+  |Người nhận|
+  :Nhận broadcast;
+  :Fetch tin nhắn từ DB;
+  :Hiển thị tin nhắn;
+  :Phát âm thanh thông báo;
+  
+elseif (Gửi media) then
+  
+  |Người dùng|
+  :Chọn ảnh/video/file;
+  
+  |Hệ thống|
+  :Validate file;
+  
+  if (File hợp lệ?) then (Có)
+    :Compress & tạo thumbnail;
+    :Upload lên Storage;
+    :Lấy public URL;
+    :Lưu tin nhắn với media_url;
+    :Broadcast qua Realtime;
+  else (Không)
+    :Thông báo lỗi;
+  endif
+  
+elseif (Trả lời tin nhắn) then
+  
+  |Người dùng|
+  :Chọn tin nhắn để trả lời;
+  :Nhập tin nhắn trả lời;
+  :Nhấn "Gửi";
+  
+  |Hệ thống|
+  :Lưu với reply_to_message_id;
+  :Broadcast qua Realtime;
+  
+else (Đánh dấu đã đọc)
+  
+  |Người dùng|
+  :Xem tin nhắn;
+  
+  |Hệ thống|
+  :Lưu vào message_reads;
+  :Cập nhật unread_count;
+  :Hiển thị checkmark xanh;
+  
+endif
+
+stop
+
+@enduml

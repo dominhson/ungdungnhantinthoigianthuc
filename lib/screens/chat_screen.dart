@@ -46,6 +46,7 @@ class _ChatScreenState extends State<ChatScreen> {
   RealtimeChannel? _messagesChannel;
   Message? _replyingTo; // Message being replied to
   Message? _editingMessage; // Message being edited
+  bool _showEmojiPicker = false; // Show emoji picker for sending
 
   @override
   void initState() {
@@ -1401,11 +1402,17 @@ class _ChatScreenState extends State<ChatScreen> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(
-                        Icons.sentiment_satisfied_outlined,
-                        color: Color(0xFF94a3b8),
+                      icon: Icon(
+                        _showEmojiPicker
+                            ? Icons.keyboard
+                            : Icons.sentiment_satisfied_outlined,
+                        color: const Color(0xFF94a3b8),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        setState(() {
+                          _showEmojiPicker = !_showEmojiPicker;
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -1447,9 +1454,167 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
+            
+            // Emoji Picker
+            if (_showEmojiPicker)
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                height: 300,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1c212b),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'CHỌN EMOJI',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 2,
+                            color: Color(0xFF94a3b8),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 20),
+                          color: const Color(0xFF94a3b8),
+                          onPressed: () {
+                            setState(() => _showEmojiPicker = false);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(child: _buildEmojiGrid()),
+                  ],
+                ),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEmojiGrid() {
+    final emojis = [
+      // Smileys & Emotion
+      '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+      '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+      '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪',
+      '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨',
+      '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥',
+      '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕',
+      '🤢', '🤮', '🤧', '🥵', '🥶', '😵', '🤯', '🤠',
+      '🥳', '😎', '🤓', '🧐', '😕', '😟', '🙁', '☹️',
+      '😮', '😯', '😲', '😳', '🥺', '😦', '😧', '😨',
+      '😰', '😥', '😢', '😭', '😱', '😖', '😣', '😞',
+      '😓', '😩', '😫', '🥱', '😤', '😡', '😠', '🤬',
+      '😈', '👿', '💀', '☠️', '💩', '🤡', '👹', '👺',
+      // Gestures
+      '👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️',
+      '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕',
+      '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜',
+      '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅',
+      // Hearts
+      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+      '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖',
+      '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️',
+      // Animals
+      '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼',
+      '🐨', '🐯', '🦁', '🐮', '🐷', '🐸', '🐵', '🐔',
+      '🐧', '🐦', '🐤', '🦆', '🦅', '🦉', '🦇', '🐺',
+      // Food
+      '🍎', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🍈',
+      '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆',
+      '🥑', '🥦', '🥬', '🥒', '🌶️', '🌽', '🥕', '🧄',
+      '🍔', '🍟', '🍕', '🥪', '🌭', '🍗', '🍖', '🥓',
+      '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪',
+      '🍦', '🍧', '🍨', '🥧', '🧁', '🍰', '🎂', '🍮',
+      '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜',
+      // Activities
+      '⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉',
+      '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍',
+      '🎮', '🕹️', '🎯', '🎲', '🎰', '🎳', '🎪', '🎭',
+      '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷',
+      // Travel
+      '🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑',
+      '🚒', '🚐', '🚚', '🚛', '🚜', '🛴', '🚲', '🛵',
+      '🏍️', '✈️', '🛫', '🛬', '🚀', '🛸', '🚁', '⛵',
+      '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '⛽', '🚧',
+      // Objects
+      '⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️',
+      '💡', '🔦', '🕯️', '🪔', '📷', '📸', '📹', '🎥',
+      '📞', '☎️', '📺', '📻', '🎙️', '⏰', '⏱️', '⏲️',
+      '💰', '💵', '💴', '💶', '💷', '💳', '💎', '⚖️',
+      '🔨', '⚒️', '🛠️', '⛏️', '🔧', '🔩', '⚙️', '🗜️',
+      // Symbols
+      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+      '💯', '💢', '💬', '💭', '💤', '💮', '♨️', '💈',
+      '🔔', '🔕', '🎵', '🎶', '🔇', '🔈', '🔉', '🔊',
+      '✅', '✔️', '☑️', '❌', '❎', '⭕', '🛑', '⛔',
+      '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳',
+      '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔',
+      '⚠️', '🚸', '⚜️', '🔱', '♻️', '✳️', '❇️', '✴️',
+      '💠', '🌀', '➕', '➖', '➗', '✖️', '💲', '💱',
+      '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪',
+      '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳',
+      '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '⬛',
+      '⬜', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '🟫',
+    ];
+
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 8,
+        mainAxisSpacing: 8,
+        crossAxisSpacing: 8,
+        childAspectRatio: 1,
+      ),
+      itemCount: emojis.length,
+      itemBuilder: (context, index) {
+        final emoji = emojis[index];
+        return InkWell(
+          onTap: () {
+            // Insert emoji at cursor position
+            final text = _messageController.text;
+            final selection = _messageController.selection;
+            final newText = text.replaceRange(
+              selection.start,
+              selection.end,
+              emoji,
+            );
+            _messageController.value = TextEditingValue(
+              text: newText,
+              selection: TextSelection.collapsed(
+                offset: selection.start + emoji.length,
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF0d1117),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.05),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                emoji,
+                style: const TextStyle(fontSize: 24),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

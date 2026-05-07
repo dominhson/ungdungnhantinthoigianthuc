@@ -1,0 +1,201 @@
+@startuml Authentication Sequence
+title Sequence Diagram - Xác thực người dùng (Authentication)
+
+hide footbox
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+
+skinparam actor {
+  BorderColor Black
+}
+skinparam boundary {
+  BorderColor Black
+}
+skinparam control {
+  BorderColor Black
+}
+skinparam entity {
+  BorderColor Black
+}
+
+actor "Người dùng" as User
+boundary ": WelcomeScreen" as Welcome
+boundary ": LoginScreen" as Login
+boundary ": RegisterScreen" as Register
+boundary ": ChatListScreen" as ChatList
+control ": AuthService" as AuthCtrl
+control ": UserService" as UserCtrl
+entity ": Supabase Auth" as SupaAuth
+entity ": users" as UserDB
+
+activate User
+
+' ===== KHỞI ĐỘNG ỨNG DỤNG =====
+skinparam ArrowColor DeepSkyBlue
+User -> Welcome: 1. Mở ứng dụng
+activate Welcome
+
+skinparam ArrowColor DeepSkyBlue
+Welcome -> AuthCtrl: 2. checkAuthStatus()
+activate AuthCtrl
+
+skinparam ArrowColor DeepSkyBlue
+AuthCtrl -> SupaAuth: 3. getCurrentUser()
+activate SupaAuth
+
+skinparam ArrowColor Red
+SupaAuth --> AuthCtrl: 4. null (chưa đăng nhập)
+deactivate SupaAuth
+
+skinparam ArrowColor Red
+AuthCtrl --> Welcome: 5. Not authenticated
+deactivate AuthCtrl
+
+skinparam ArrowColor Red
+Welcome --> User: 6. Hiển thị màn hình Welcome
+
+' ===== CHỌN ĐĂNG NHẬP HOẶC ĐĂNG KÝ =====
+loop Thực hiện xác thực
+
+  alt Người dùng chọn Đăng nhập
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> Welcome: 7. Click 'Đăng nhập'
+    
+    skinparam ArrowColor DeepSkyBlue
+    Welcome -> Login: 8. Chuyển sang LoginScreen
+    deactivate Welcome
+    activate Login
+    
+    skinparam ArrowColor Red
+    Login --> User: 9. Hiển thị form đăng nhập
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> Login: 10. Nhập email & password
+    
+    skinparam ArrowColor DeepSkyBlue
+    Login -> AuthCtrl: 11. signIn(email, password)
+    activate AuthCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    AuthCtrl -> SupaAuth: 12. signInWithPassword()
+    activate SupaAuth
+    
+    group Trường hợp thành công
+      skinparam ArrowColor Red
+      SupaAuth --> AuthCtrl: 13. AuthResponse (session)
+      deactivate SupaAuth
+      
+      skinparam ArrowColor DeepSkyBlue
+      AuthCtrl -> UserCtrl: 14. updateOnlineStatus()
+      activate UserCtrl
+      
+      skinparam ArrowColor DeepSkyBlue
+      UserCtrl -> UserDB: 15. UPDATE users\nSET is_online = true
+      activate UserDB
+      
+      skinparam ArrowColor Red
+      UserDB --> UserCtrl: 16. Updated
+      deactivate UserDB
+      deactivate UserCtrl
+      
+      skinparam ArrowColor Red
+      AuthCtrl --> Login: 17. Login successful
+      deactivate AuthCtrl
+      
+      skinparam ArrowColor DeepSkyBlue
+      Login -> ChatList: 18. Chuyển sang ChatListScreen
+      deactivate Login
+      activate ChatList
+      
+      skinparam ArrowColor Red
+      ChatList --> User: 19. Hiển thị danh sách chat
+      deactivate ChatList
+      
+      break
+    end
+    
+    group Trường hợp lỗi
+      skinparam ArrowColor Red
+      SupaAuth --> AuthCtrl: 13. Error (Invalid credentials)
+      deactivate SupaAuth
+      
+      skinparam ArrowColor Red
+      AuthCtrl --> Login: 14. Login failed
+      deactivate AuthCtrl
+      
+      skinparam ArrowColor Red
+      Login --> User: 15. Hiển thị lỗi: Sai email hoặc password
+    end
+    
+  else Người dùng chọn Đăng ký
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> Welcome: 7. Click 'Đăng ký'
+    
+    skinparam ArrowColor DeepSkyBlue
+    Welcome -> Register: 8. Chuyển sang RegisterScreen
+    deactivate Welcome
+    activate Register
+    
+    skinparam ArrowColor Red
+    Register --> User: 9. Hiển thị form đăng ký
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> Register: 10. Nhập email, password, tên
+    
+    skinparam ArrowColor DeepSkyBlue
+    Register -> AuthCtrl: 11. signUp(email, password, fullName)
+    activate AuthCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    AuthCtrl -> SupaAuth: 12. signUp()
+    activate SupaAuth
+    
+    skinparam ArrowColor Red
+    SupaAuth --> AuthCtrl: 13. AuthResponse (user)
+    deactivate SupaAuth
+    
+    skinparam ArrowColor DeepSkyBlue
+    AuthCtrl -> UserDB: 14. INSERT INTO users\n(id, email, full_name)
+    activate UserDB
+    
+    skinparam ArrowColor Red
+    UserDB --> AuthCtrl: 15. User created
+    deactivate UserDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    AuthCtrl -> UserCtrl: 16. updateOnlineStatus()
+    activate UserCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    UserCtrl -> UserDB: 17. UPDATE users\nSET is_online = true
+    activate UserDB
+    
+    skinparam ArrowColor Red
+    UserDB --> UserCtrl: 18. Updated
+    deactivate UserDB
+    deactivate UserCtrl
+    
+    skinparam ArrowColor Red
+    AuthCtrl --> Register: 19. Register successful
+    deactivate AuthCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    Register -> ChatList: 20. Chuyển sang ChatListScreen
+    deactivate Register
+    activate ChatList
+    
+    skinparam ArrowColor Red
+    ChatList --> User: 21. Hiển thị danh sách chat
+    deactivate ChatList
+    
+    break
+    
+  end
+  
+end
+
+deactivate User
+
+@enduml

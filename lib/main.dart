@@ -7,6 +7,8 @@ import 'screens/register_screen.dart';
 import 'screens/chat_list_screen.dart';
 import 'screens/profile_screen_new.dart';
 import 'screens/friends_screen.dart';
+import 'screens/forgot_password_screen.dart';
+import 'screens/reset_password_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +61,8 @@ class MyApp extends StatelessWidget {
         '/welcome': (context) => const WelcomeScreen(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
+        '/forgot-password': (context) => const ForgotPasswordScreen(),
+        '/reset-password': (context) => const ResetPasswordScreen(),
         '/chats': (context) => const ChatListScreen(),
         '/friends': (context) => const FriendsScreen(),
         '/profile': (context) => const ProfileScreenNew(),

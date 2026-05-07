@@ -1,0 +1,322 @@
+@startuml Group Chat Sequence
+title Sequence Diagram - Quản lý nhóm chat (Group Chat Management)
+
+hide footbox
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+
+skinparam actor {
+  BorderColor Black
+}
+skinparam boundary {
+  BorderColor Black
+}
+skinparam control {
+  BorderColor Black
+}
+skinparam entity {
+  BorderColor Black
+}
+
+actor "Admin" as Admin
+actor "Thành viên" as Member
+boundary ": MyGroupsScreen" as GroupUI
+boundary ": CreateGroupScreen" as CreateUI
+boundary ": GroupInfoScreen" as InfoUI
+control ": GroupService" as GroupCtrl
+control ": StorageService" as Storage
+entity ": conversations" as ConvDB
+entity ": conversation_participants" as PartDB
+entity ": messages" as MsgDB
+
+activate Admin
+
+' ===== TẢI DANH SÁCH NHÓM =====
+skinparam ArrowColor DeepSkyBlue
+Admin -> GroupUI: 1. Mở màn hình Groups
+activate GroupUI
+
+skinparam ArrowColor DeepSkyBlue
+GroupUI -> GroupCtrl: 2. loadGroups()
+activate GroupCtrl
+
+skinparam ArrowColor DeepSkyBlue
+GroupCtrl -> ConvDB: 3. SELECT * FROM conversations\nWHERE is_group = true
+activate ConvDB
+
+skinparam ArrowColor DeepSkyBlue
+ConvDB -> PartDB: 4. JOIN conversation_participants
+activate PartDB
+
+skinparam ArrowColor Red
+PartDB --> ConvDB: 5. Participants data
+deactivate PartDB
+
+skinparam ArrowColor Red
+ConvDB --> GroupCtrl: 6. List<Group>
+deactivate ConvDB
+
+skinparam ArrowColor Red
+GroupCtrl --> GroupUI: 7. Groups data
+deactivate GroupCtrl
+
+skinparam ArrowColor Red
+GroupUI --> Admin: 8. Hiển thị danh sách nhóm
+
+' ===== TẠO NHÓM MỚI =====
+loop Quản lý nhóm
+
+  alt Tạo nhóm mới
+    
+    skinparam ArrowColor DeepSkyBlue
+    Admin -> GroupUI: 9. Click 'Tạo nhóm'
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupUI -> CreateUI: 10. Chuyển sang CreateGroupScreen
+    deactivate GroupUI
+    activate CreateUI
+    
+    skinparam ArrowColor Red
+    CreateUI --> Admin: 11. Hiển thị form tạo nhóm
+    
+    skinparam ArrowColor DeepSkyBlue
+    Admin -> CreateUI: 12. Nhập thông tin:\n- Tên nhóm\n- Mô tả\n- Chọn avatar\n- Chọn thành viên
+    
+    skinparam ArrowColor DeepSkyBlue
+    CreateUI -> GroupCtrl: 13. createGroup(groupInfo, members)
+    activate GroupCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupCtrl -> GroupCtrl: 14. validateGroupInfo()
+    
+    group Trường hợp có avatar
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> Storage: 15. uploadAvatar(file)
+      activate Storage
+      
+      skinparam ArrowColor Red
+      Storage --> GroupCtrl: 16. avatar_url
+      deactivate Storage
+      
+    end
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupCtrl -> ConvDB: 17. INSERT INTO conversations\n(is_group, name, description,\navatar_url, created_by)
+    activate ConvDB
+    
+    skinparam ArrowColor Red
+    ConvDB --> GroupCtrl: 18. group_id
+    deactivate ConvDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupCtrl -> PartDB: 19. INSERT creator\n(group_id, user_id, role='admin')
+    activate PartDB
+    
+    skinparam ArrowColor Red
+    PartDB --> GroupCtrl: 20. Creator added
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupCtrl -> PartDB: 21. INSERT members\n(group_id, user_ids, role='member')
+    
+    skinparam ArrowColor Red
+    PartDB --> GroupCtrl: 22. Members added
+    deactivate PartDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupCtrl -> MsgDB: 23. INSERT system message\n"Admin đã tạo nhóm"
+    activate MsgDB
+    
+    skinparam ArrowColor Red
+    MsgDB --> GroupCtrl: 24. Message created
+    deactivate MsgDB
+    
+    skinparam ArrowColor Red
+    GroupCtrl --> CreateUI: 25. Group created successfully
+    deactivate GroupCtrl
+    
+    skinparam ArrowColor Red
+    CreateUI --> Admin: 26. Thông báo: Đã tạo nhóm
+    deactivate CreateUI
+    activate GroupUI
+    
+  else Xem thông tin nhóm
+    
+    skinparam ArrowColor DeepSkyBlue
+    Admin -> GroupUI: 9. Click vào nhóm
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupUI -> InfoUI: 10. Chuyển sang GroupInfoScreen
+    deactivate GroupUI
+    activate InfoUI
+    
+    skinparam ArrowColor DeepSkyBlue
+    InfoUI -> GroupCtrl: 11. loadGroupInfo(groupId)
+    activate GroupCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupCtrl -> ConvDB: 12. SELECT * FROM conversations\nWHERE id = groupId
+    activate ConvDB
+    
+    skinparam ArrowColor Red
+    ConvDB --> GroupCtrl: 13. Group info
+    deactivate ConvDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    GroupCtrl -> PartDB: 14. SELECT * FROM participants\nWHERE conversation_id = groupId
+    activate PartDB
+    
+    skinparam ArrowColor Red
+    PartDB --> GroupCtrl: 15. List<Participant>
+    deactivate PartDB
+    
+    skinparam ArrowColor Red
+    GroupCtrl --> InfoUI: 16. Group data
+    deactivate GroupCtrl
+    
+    skinparam ArrowColor Red
+    InfoUI --> Admin: 17. Hiển thị thông tin nhóm
+    
+    ' ===== THÊM THÀNH VIÊN =====
+    alt Admin thêm thành viên
+      
+      skinparam ArrowColor DeepSkyBlue
+      Admin -> InfoUI: 18. Click 'Thêm thành viên'
+      
+      skinparam ArrowColor Red
+      InfoUI --> Admin: 19. Hiển thị danh sách bạn bè
+      
+      skinparam ArrowColor DeepSkyBlue
+      Admin -> InfoUI: 20. Chọn thành viên mới
+      
+      skinparam ArrowColor DeepSkyBlue
+      InfoUI -> GroupCtrl: 21. addMembers(groupId, userIds)
+      activate GroupCtrl
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> PartDB: 22. INSERT INTO participants\n(group_id, user_ids, role='member')
+      activate PartDB
+      
+      skinparam ArrowColor Red
+      PartDB --> GroupCtrl: 23. Members added
+      deactivate PartDB
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> MsgDB: 24. INSERT system message\n"Admin đã thêm X, Y vào nhóm"
+      activate MsgDB
+      
+      skinparam ArrowColor Red
+      MsgDB --> GroupCtrl: 25. Message created
+      deactivate MsgDB
+      
+      skinparam ArrowColor Red
+      GroupCtrl --> InfoUI: 26. Success
+      deactivate GroupCtrl
+      
+      skinparam ArrowColor Red
+      InfoUI --> Admin: 27. Thông báo: Đã thêm thành viên
+      
+      activate Member
+      skinparam ArrowColor Red
+      InfoUI --> Member: 28. Thông báo: Bạn được thêm vào nhóm
+      
+    else Thành viên rời nhóm
+      
+      skinparam ArrowColor DeepSkyBlue
+      Member -> InfoUI: 18. Click 'Rời nhóm'
+      
+      skinparam ArrowColor Red
+      InfoUI --> Member: 19. Xác nhận rời nhóm?
+      
+      skinparam ArrowColor DeepSkyBlue
+      Member -> InfoUI: 20. Xác nhận
+      
+      skinparam ArrowColor DeepSkyBlue
+      InfoUI -> GroupCtrl: 21. leaveGroup(groupId, userId)
+      activate GroupCtrl
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> PartDB: 22. DELETE FROM participants\nWHERE group_id = ? AND user_id = ?
+      activate PartDB
+      
+      skinparam ArrowColor Red
+      PartDB --> GroupCtrl: 23. Deleted
+      deactivate PartDB
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> MsgDB: 24. INSERT system message\n"Member đã rời khỏi nhóm"
+      activate MsgDB
+      
+      skinparam ArrowColor Red
+      MsgDB --> GroupCtrl: 25. Message created
+      deactivate MsgDB
+      
+      skinparam ArrowColor Red
+      GroupCtrl --> InfoUI: 26. Success
+      deactivate GroupCtrl
+      
+      skinparam ArrowColor Red
+      InfoUI --> Member: 27. Thông báo: Đã rời nhóm
+      deactivate Member
+      
+      skinparam ArrowColor Red
+      InfoUI --> Admin: 28. Thông báo: Member đã rời nhóm
+      
+    else Admin xóa nhóm
+      
+      skinparam ArrowColor DeepSkyBlue
+      Admin -> InfoUI: 18. Click 'Xóa nhóm'
+      
+      skinparam ArrowColor Red
+      InfoUI --> Admin: 19. Xác nhận xóa nhóm?
+      
+      skinparam ArrowColor DeepSkyBlue
+      Admin -> InfoUI: 20. Xác nhận
+      
+      skinparam ArrowColor DeepSkyBlue
+      InfoUI -> GroupCtrl: 21. deleteGroup(groupId)
+      activate GroupCtrl
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> MsgDB: 22. DELETE FROM messages\nWHERE conversation_id = groupId
+      activate MsgDB
+      
+      skinparam ArrowColor Red
+      MsgDB --> GroupCtrl: 23. Messages deleted
+      deactivate MsgDB
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> PartDB: 24. DELETE FROM participants\nWHERE conversation_id = groupId
+      activate PartDB
+      
+      skinparam ArrowColor Red
+      PartDB --> GroupCtrl: 25. Participants deleted
+      deactivate PartDB
+      
+      skinparam ArrowColor DeepSkyBlue
+      GroupCtrl -> ConvDB: 26. DELETE FROM conversations\nWHERE id = groupId
+      activate ConvDB
+      
+      skinparam ArrowColor Red
+      ConvDB --> GroupCtrl: 27. Group deleted
+      deactivate ConvDB
+      
+      skinparam ArrowColor Red
+      GroupCtrl --> InfoUI: 28. Success
+      deactivate GroupCtrl
+      
+      skinparam ArrowColor Red
+      InfoUI --> Admin: 29. Thông báo: Đã xóa nhóm
+      deactivate InfoUI
+      activate GroupUI
+      
+    end
+    
+  end
+  
+end
+
+deactivate GroupUI
+deactivate Admin
+
+@enduml

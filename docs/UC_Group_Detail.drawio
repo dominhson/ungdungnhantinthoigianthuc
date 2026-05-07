@@ -1,0 +1,82 @@
+<mxfile host="app.diagrams.net" agent="Kiro">
+  <diagram name="UC Group - Chi tiết" id="group">
+    <mxGraphModel dx="1414" dy="777" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="900" pageHeight="650" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="frame" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=180;height=30;fontSize=14;fontStyle=1;" value="Nhóm Chat - Chi tiết" vertex="1">
+          <mxGeometry height="550" width="500" x="200" y="50" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=12;" value="Registered&#xa;User" vertex="1">
+          <mxGeometry height="100" width="50" x="80" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="uc_login" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;strokeWidth=2;" value="Đăng nhập" vertex="1">
+          <mxGeometry height="50" width="100" x="496" y="197" as="geometry" />
+        </mxCell>
+        <mxCell id="uc01" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Tạo nhóm chat" vertex="1">
+          <mxGeometry height="60" width="110" x="250" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="uc02" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Xem danh sách&#xa;nhóm" vertex="1">
+          <mxGeometry height="60" width="110" x="250" y="190" as="geometry" />
+        </mxCell>
+        <mxCell id="uc03" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Gửi tin nhắn&#xa;trong nhóm" vertex="1">
+          <mxGeometry height="60" width="110" x="250" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="uc04" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Thêm&#xa;thành viên" vertex="1">
+          <mxGeometry height="60" width="110" x="496" y="334" as="geometry" />
+        </mxCell>
+        <mxCell id="uc05" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Xóa&#xa;thành viên" vertex="1">
+          <mxGeometry height="60" width="110" x="462" y="425" as="geometry" />
+        </mxCell>
+        <mxCell id="uc06" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Rời nhóm" vertex="1">
+          <mxGeometry height="60" width="110" x="438" y="502" as="geometry" />
+        </mxCell>
+        <mxCell id="uc07" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Xem thông tin&#xa;nhóm" vertex="1">
+          <mxGeometry height="60" width="110" x="254" y="505" as="geometry" />
+        </mxCell>
+        <mxCell id="uc08" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=11;" value="Quản lý&#xa;thành viên" vertex="1">
+          <mxGeometry height="60" width="110" x="250" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" edge="1" parent="1" source="user" style="endArrow=none;html=1;" target="uc01" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" edge="1" parent="1" source="user" style="endArrow=none;html=1;" target="uc02" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" edge="1" parent="1" source="user" style="endArrow=none;html=1;" target="uc03" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" edge="1" parent="1" source="user" style="endArrow=none;html=1;" target="uc07" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l8" edge="1" parent="1" source="user" style="endArrow=none;html=1;" target="uc08" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc1" edge="1" parent="1" source="uc01" style="endArrow=open;dashed=1;html=1;fontSize=9;" target="uc_login" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc2" edge="1" parent="1" source="uc02" style="endArrow=open;dashed=1;html=1;fontSize=9;" target="uc_login" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc3" edge="1" parent="1" source="uc03" style="endArrow=open;dashed=1;html=1;fontSize=9;" target="uc_login" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc8" edge="1" parent="1" source="uc08" style="endArrow=open;dashed=1;html=1;fontSize=9;" target="uc_login" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ext1" edge="1" parent="1" source="uc04" style="endArrow=open;dashed=1;html=1;fontSize=9;" target="uc08" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ext2" edge="1" parent="1" source="uc05" style="endArrow=open;dashed=1;html=1;fontSize=9;" target="uc08" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ext3" edge="1" parent="1" source="uc06" style="endArrow=open;dashed=1;html=1;fontSize=9;" target="uc08" value="&amp;lt;&amp;lt;extend&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=16;fontStyle=1;" value="USE CASE: NHÓM CHAT (PHÂN RÃ)" vertex="1">
+          <mxGeometry height="30" width="400" x="250" y="10" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

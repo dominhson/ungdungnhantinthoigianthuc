@@ -190,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    // Navigate to forgot password
+                    Navigator.pushNamed(context, '/forgot-password');
                   },
                   child: const Text(
                     'QUÊN MẬT KHẨU?',

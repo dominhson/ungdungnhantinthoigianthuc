@@ -1,0 +1,188 @@
+@startuml Group Chat Flow
+!theme vibrant
+title Sơ đồ hoạt động 5: Quản lý nhóm chat (Group Chat Management)
+
+|Người dùng|
+start
+:Vào màn hình Groups;
+
+|Hệ thống|
+:Tải danh sách nhóm;
+note right
+  SELECT c.*, COUNT(cp.user_id) as member_count
+  FROM conversations c
+  JOIN conversation_participants cp 
+    ON cp.conversation_id = c.id
+  WHERE c.is_group = true
+  AND cp.user_id = current_user
+  GROUP BY c.id
+  ORDER BY c.updated_at DESC
+end note
+
+:Hiển thị danh sách nhóm;
+
+|Người dùng|
+if (Chọn hành động) then (Tạo nhóm mới)
+  |#LightBlue|Tạo nhóm|
+  :Nhập thông tin nhóm;
+  :- Tên nhóm;
+  :- Mô tả;
+  :- Chọn avatar;
+  :Chọn thành viên từ bạn bè;
+  
+  |Hệ thống|
+  if (Kiểm tra thông tin) then (Hợp lệ)
+    if (Có avatar?) then (Có)
+      :Upload lên Supabase Storage;
+      :Lấy public URL;
+    endif
+    
+    :Tạo bản ghi nhóm;
+    note right
+      INSERT INTO conversations (
+        is_group, name, description,
+        avatar_url, created_by
+      ) VALUES (
+        true, 'Tên nhóm', 'Mô tả',
+        'url', current_user
+      ) RETURNING id;
+    end note
+    
+    :Thêm creator vào participants;
+    note right
+      INSERT INTO conversation_participants (
+        conversation_id, user_id, role
+      ) VALUES (
+        group_id, current_user, 'admin'
+      );
+    end note
+    
+    :Thêm các thành viên;
+    :Gửi thông báo cho thành viên;
+    :Tạo tin nhắn hệ thống;
+    note right
+      "X đã tạo nhóm"
+    end note
+    
+    #LightGreen:Hiển thị thành công;
+  else (Không hợp lệ)
+    #Pink:Hiển thị lỗi;
+  endif
+  
+elseif (Xem thông tin nhóm) then
+  |#LightCoral|Xem thông tin nhóm|
+  
+  |Hệ thống|
+  :Tải thông tin nhóm;
+  :Tải danh sách thành viên;
+  :Hiển thị thông tin nhóm;
+  
+  |Người dùng|
+  if (Chọn hành động) then (Chỉnh sửa)
+    |Hệ thống|
+    if (Là admin?) then (Có)
+      |Người dùng|
+      :Cập nhật thông tin;
+      
+      |Hệ thống|
+      :Update conversations;
+      :Tạo tin nhắn hệ thống;
+      :Broadcast update cho thành viên;
+      #LightGreen:Hiển thị thành công;
+    else (Không)
+      #Pink:Hiển thị lỗi: Chỉ admin mới có quyền;
+    endif
+    
+  elseif (Thêm thành viên) then
+    |Hệ thống|
+    if (Là admin?) then (Có)
+      |Người dùng|
+      :Chọn thành viên mới từ bạn bè;
+      
+      |Hệ thống|
+      :Lọc bỏ thành viên đã có;
+      :Thêm vào conversation_participants;
+      :Tạo tin nhắn hệ thống;
+      :Thông báo cho thành viên mới;
+      #LightGreen:Hiển thị thành công;
+    else (Không)
+      #Pink:Hiển thị lỗi: Chỉ admin mới có quyền;
+    endif
+    
+  elseif (Xóa thành viên) then
+    |Hệ thống|
+    if (Là admin?) then (Có)
+      |Người dùng|
+      :Chọn thành viên để xóa;
+      
+      if (Xác nhận xóa?) then (Có)
+        |Hệ thống|
+        :Xóa khỏi conversation_participants;
+        :Tạo tin nhắn hệ thống;
+        :Thông báo cho người bị xóa;
+        #LightGreen:Hiển thị thành công;
+      else (Không)
+        :Hủy bỏ;
+      endif
+    else (Không)
+      #Pink:Hiển thị lỗi: Chỉ admin mới có quyền;
+    endif
+    
+  elseif (Rời nhóm) then
+    |#Pink|Rời nhóm|
+    
+    |Người dùng|
+    if (Xác nhận rời nhóm?) then (Có)
+      |Hệ thống|
+      if (Là admin duy nhất?) then (Không)
+        :Xóa khỏi conversation_participants;
+        :Tạo tin nhắn hệ thống;
+        :Thông báo cho thành viên còn lại;
+        #LightGreen:Hiển thị thành công;
+      else (Có)
+        #Pink:Hiển thị lỗi: Cần chuyển quyền admin;
+      endif
+    else (Không)
+      :Hủy bỏ;
+    endif
+    
+  else (Xóa nhóm)
+    |#Pink|Xóa nhóm|
+    
+    |Hệ thống|
+    if (Là người tạo?) then (Có)
+      |Người dùng|
+      if (Xác nhận xóa nhóm?) then (Có)
+        |Hệ thống|
+        :Xóa tất cả tin nhắn;
+        :Xóa tất cả participants;
+        :Xóa conversation;
+        :Thông báo cho tất cả thành viên;
+        #LightGreen:Hiển thị thành công;
+      else (Không)
+        :Hủy bỏ;
+      endif
+    else (Không)
+      #Pink:Hiển thị lỗi: Chỉ người tạo mới có quyền xóa;
+    endif
+  endif
+  
+else (Mở chat nhóm)
+  |#LightYellow|Chat nhóm|
+  :Mở màn hình chat nhóm;
+  :Tải tin nhắn nhóm;
+  :Thiết lập Realtime cho nhóm;
+endif
+
+stop
+
+legend right
+  |= Màu sắc |= Ý nghĩa |
+  | <#LightBlue> | Tạo nhóm |
+  | <#LightCoral> | Xem/Chỉnh sửa thông tin |
+  | <#Pink> | Rời/Xóa nhóm |
+  | <#LightYellow> | Chat trong nhóm |
+  | <#LightGreen> | Thành công |
+endlegend
+
+@enduml

@@ -1,0 +1,378 @@
+@startuml Media Handling Sequence
+title Sequence Diagram - Xử lý Media (Media Handling)
+
+hide footbox
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+
+skinparam actor {
+  BorderColor Black
+}
+skinparam boundary {
+  BorderColor Black
+}
+skinparam control {
+  BorderColor Black
+}
+skinparam entity {
+  BorderColor Black
+}
+
+actor "Người dùng" as User
+boundary ": ChatScreen" as ChatUI
+boundary ": MediaPicker" as Picker
+control ": MediaService" as MediaCtrl
+control ": StorageService" as Storage
+control ": ChatService" as ChatCtrl
+entity ": Supabase Storage" as StorageDB
+entity ": messages" as MsgDB
+entity ": media_metadata" as MetaDB
+
+activate User
+
+' ===== CHỌN LOẠI MEDIA =====
+skinparam ArrowColor DeepSkyBlue
+User -> ChatUI: 1. Click 'Gửi media'
+activate ChatUI
+
+skinparam ArrowColor Red
+ChatUI --> User: 2. Hiển thị menu:\n- Ảnh\n- Video\n- Audio\n- File
+
+loop Gửi media
+
+  alt Gửi ảnh
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> ChatUI: 3. Chọn 'Ảnh'
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> Picker: 4. openImagePicker()
+    activate Picker
+    
+    skinparam ArrowColor Red
+    Picker --> User: 5. Hiển thị:\n- Camera\n- Thư viện
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> Picker: 6. Chọn ảnh
+    
+    skinparam ArrowColor Red
+    Picker --> ChatUI: 7. Image file
+    deactivate Picker
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> MediaCtrl: 8. validateImage(file)
+    activate MediaCtrl
+    
+    group Trường hợp hợp lệ
+      
+      skinparam ArrowColor DeepSkyBlue
+      MediaCtrl -> MediaCtrl: 9. compressImage(quality: 85%)
+      
+      skinparam ArrowColor DeepSkyBlue
+      MediaCtrl -> MediaCtrl: 10. generateThumbnail(300x300)
+      
+      skinparam ArrowColor DeepSkyBlue
+      MediaCtrl -> Storage: 11. uploadImage(file, thumbnail)
+      activate Storage
+      
+      skinparam ArrowColor DeepSkyBlue
+      Storage -> Storage: 12. generateUniqueFilename()
+      note right
+        userId_timestamp_random.jpg
+      end note
+      
+      skinparam ArrowColor Red
+      ChatUI --> User: 13. Hiển thị progress bar
+      
+      skinparam ArrowColor DeepSkyBlue
+      Storage -> StorageDB: 14. PUT /images/filename.jpg
+      activate StorageDB
+      
+      skinparam ArrowColor Red
+      StorageDB --> Storage: 15. Upload complete
+      deactivate StorageDB
+      
+      skinparam ArrowColor DeepSkyBlue
+      Storage -> StorageDB: 16. getPublicUrl()
+      activate StorageDB
+      
+      skinparam ArrowColor Red
+      StorageDB --> Storage: 17. public_url
+      deactivate StorageDB
+      
+      skinparam ArrowColor Red
+      Storage --> MediaCtrl: 18. {url, thumbnail_url}
+      deactivate Storage
+      
+      skinparam ArrowColor DeepSkyBlue
+      MediaCtrl -> ChatCtrl: 19. sendMediaMessage(url, type='image')
+      deactivate MediaCtrl
+      activate ChatCtrl
+      
+      skinparam ArrowColor DeepSkyBlue
+      ChatCtrl -> MsgDB: 20. INSERT INTO messages\n(conversation_id, sender_id,\ntype='image', media_url)
+      activate MsgDB
+      
+      skinparam ArrowColor Red
+      MsgDB --> ChatCtrl: 21. message_id
+      deactivate MsgDB
+      
+      skinparam ArrowColor DeepSkyBlue
+      ChatCtrl -> MetaDB: 22. INSERT INTO media_metadata\n(message_id, media_type,\nmedia_url, thumbnail_url,\nwidth, height, size)
+      activate MetaDB
+      
+      skinparam ArrowColor Red
+      MetaDB --> ChatCtrl: 23. Metadata saved
+      deactivate MetaDB
+      
+      skinparam ArrowColor DeepSkyBlue
+      ChatCtrl -> ChatCtrl: 24. broadcastMessage(message_id)
+      
+      skinparam ArrowColor Red
+      ChatCtrl --> ChatUI: 25. Message sent
+      deactivate ChatCtrl
+      
+      skinparam ArrowColor Red
+      ChatUI --> User: 26. Hiển thị ảnh trong chat
+      
+    end
+    
+    group Trường hợp lỗi
+      
+      skinparam ArrowColor Red
+      MediaCtrl --> ChatUI: 9. Error: File quá lớn (>10MB)
+      deactivate MediaCtrl
+      
+      skinparam ArrowColor Red
+      ChatUI --> User: 10. Thông báo lỗi
+      
+    end
+    
+  else Gửi video
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> ChatUI: 3. Chọn 'Video'
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> Picker: 4. openVideoPicker()
+    activate Picker
+    
+    skinparam ArrowColor Red
+    Picker --> User: 5. Hiển thị:\n- Quay video\n- Thư viện
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> Picker: 6. Chọn video
+    
+    skinparam ArrowColor Red
+    Picker --> ChatUI: 7. Video file
+    deactivate Picker
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> MediaCtrl: 8. validateVideo(file)
+    activate MediaCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> MediaCtrl: 9. compressVideo()
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> MediaCtrl: 10. extractThumbnail(firstFrame)
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> MediaCtrl: 11. getVideoDuration()
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> Storage: 12. uploadVideo(file, thumbnail)
+    activate Storage
+    
+    skinparam ArrowColor Red
+    ChatUI --> User: 13. Hiển thị progress bar
+    
+    skinparam ArrowColor DeepSkyBlue
+    Storage -> StorageDB: 14. PUT /videos/filename.mp4
+    activate StorageDB
+    
+    skinparam ArrowColor Red
+    StorageDB --> Storage: 15. Upload complete
+    deactivate StorageDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    Storage -> StorageDB: 16. getPublicUrl()
+    activate StorageDB
+    
+    skinparam ArrowColor Red
+    StorageDB --> Storage: 17. public_url
+    deactivate StorageDB
+    
+    skinparam ArrowColor Red
+    Storage --> MediaCtrl: 18. {url, thumbnail_url, duration}
+    deactivate Storage
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> ChatCtrl: 19. sendMediaMessage(url, type='video', duration)
+    deactivate MediaCtrl
+    activate ChatCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatCtrl -> MsgDB: 20. INSERT INTO messages\n(type='video', media_url, duration)
+    activate MsgDB
+    
+    skinparam ArrowColor Red
+    MsgDB --> ChatCtrl: 21. message_id
+    deactivate MsgDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatCtrl -> MetaDB: 22. INSERT INTO media_metadata\n(media_type='video', duration)
+    activate MetaDB
+    
+    skinparam ArrowColor Red
+    MetaDB --> ChatCtrl: 23. Metadata saved
+    deactivate MetaDB
+    
+    skinparam ArrowColor Red
+    ChatCtrl --> ChatUI: 24. Message sent
+    deactivate ChatCtrl
+    
+    skinparam ArrowColor Red
+    ChatUI --> User: 25. Hiển thị video player trong chat
+    
+  else Ghi âm
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> ChatUI: 3. Chọn 'Ghi âm'
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> MediaCtrl: 4. startRecording()
+    activate MediaCtrl
+    
+    skinparam ArrowColor Red
+    MediaCtrl --> ChatUI: 5. Recording started
+    
+    skinparam ArrowColor Red
+    ChatUI --> User: 6. Hiển thị UI ghi âm:\n- Timer\n- Waveform\n- Nút Dừng/Hủy
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> ChatUI: 7. Click 'Dừng'
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> MediaCtrl: 8. stopRecording()
+    
+    skinparam ArrowColor Red
+    MediaCtrl --> ChatUI: 9. Audio file
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> MediaCtrl: 10. getAudioDuration()
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> Storage: 11. uploadAudio(file)
+    activate Storage
+    
+    skinparam ArrowColor DeepSkyBlue
+    Storage -> StorageDB: 12. PUT /audios/filename.m4a
+    activate StorageDB
+    
+    skinparam ArrowColor Red
+    StorageDB --> Storage: 13. Upload complete
+    deactivate StorageDB
+    
+    skinparam ArrowColor Red
+    Storage --> MediaCtrl: 14. {url, duration}
+    deactivate Storage
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> ChatCtrl: 15. sendMediaMessage(url, type='audio', duration)
+    deactivate MediaCtrl
+    activate ChatCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatCtrl -> MsgDB: 16. INSERT INTO messages\n(type='audio', media_url, duration)
+    activate MsgDB
+    
+    skinparam ArrowColor Red
+    MsgDB --> ChatCtrl: 17. message_id
+    deactivate MsgDB
+    
+    skinparam ArrowColor Red
+    ChatCtrl --> ChatUI: 18. Message sent
+    deactivate ChatCtrl
+    
+    skinparam ArrowColor Red
+    ChatUI --> User: 19. Hiển thị audio player trong chat
+    
+  else Gửi file
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> ChatUI: 3. Chọn 'File'
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> Picker: 4. openFilePicker()
+    activate Picker
+    
+    skinparam ArrowColor Red
+    Picker --> User: 5. Hiển thị file picker
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> Picker: 6. Chọn file
+    
+    skinparam ArrowColor Red
+    Picker --> ChatUI: 7. File
+    deactivate Picker
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatUI -> MediaCtrl: 8. validateFile(file)
+    activate MediaCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> MediaCtrl: 9. getFileInfo()\n- filename\n- size\n- mime_type
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> Storage: 10. uploadFile(file)
+    activate Storage
+    
+    skinparam ArrowColor DeepSkyBlue
+    Storage -> StorageDB: 11. PUT /files/filename
+    activate StorageDB
+    
+    skinparam ArrowColor Red
+    StorageDB --> Storage: 12. Upload complete
+    deactivate StorageDB
+    
+    skinparam ArrowColor Red
+    Storage --> MediaCtrl: 13. url
+    deactivate Storage
+    
+    skinparam ArrowColor DeepSkyBlue
+    MediaCtrl -> ChatCtrl: 14. sendMediaMessage(url, type='file')
+    deactivate MediaCtrl
+    activate ChatCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatCtrl -> MsgDB: 15. INSERT INTO messages\n(type='file', media_url)
+    activate MsgDB
+    
+    skinparam ArrowColor Red
+    MsgDB --> ChatCtrl: 16. message_id
+    deactivate MsgDB
+    
+    skinparam ArrowColor DeepSkyBlue
+    ChatCtrl -> MetaDB: 17. INSERT INTO media_metadata\n(filename, size, mime_type)
+    activate MetaDB
+    
+    skinparam ArrowColor Red
+    MetaDB --> ChatCtrl: 18. Metadata saved
+    deactivate MetaDB
+    
+    skinparam ArrowColor Red
+    ChatCtrl --> ChatUI: 19. Message sent
+    deactivate ChatCtrl
+    
+    skinparam ArrowColor Red
+    ChatUI --> User: 20. Hiển thị file card trong chat
+    
+  end
+  
+end
+
+deactivate ChatUI
+deactivate User
+
+@enduml

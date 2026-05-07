@@ -50,3 +50,5 @@ app.*.map.json
 
 # Supabase config (if using local config)
 lib/config/supabase_config.dart
+
+.docs

@@ -1,0 +1,207 @@
+@startuml Realtime Chat Sequence
+title Sequence Diagram - Chat thời gian thực (Realtime Chat)
+
+hide footbox
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+
+skinparam actor {
+  BorderColor Black
+}
+skinparam boundary {
+  BorderColor Black
+}
+skinparam control {
+  BorderColor Black
+}
+skinparam entity {
+  BorderColor Black
+}
+
+actor "Người gửi" as Sender
+actor "Người nhận" as Receiver
+boundary ": ChatScreen" as ChatUI
+control ": ChatService" as ChatCtrl
+control ": RealtimeChannel" as Realtime
+entity ": conversations" as ConvDB
+entity ": messages" as MsgDB
+entity ": typing_indicators" as TypingDB
+
+activate Sender
+activate Receiver
+
+' ===== MỞ CUỘC TRÒ CHUYỆN =====
+skinparam ArrowColor DeepSkyBlue
+Sender -> ChatUI: 1. Mở cuộc trò chuyện
+activate ChatUI
+
+skinparam ArrowColor DeepSkyBlue
+ChatUI -> ChatCtrl: 2. loadConversation(conversationId)
+activate ChatCtrl
+
+skinparam ArrowColor DeepSkyBlue
+ChatCtrl -> MsgDB: 3. SELECT * FROM messages\nWHERE conversation_id = ?
+activate MsgDB
+
+skinparam ArrowColor Red
+MsgDB --> ChatCtrl: 4. List<Message>
+deactivate MsgDB
+
+skinparam ArrowColor Red
+ChatCtrl --> ChatUI: 5. Messages data
+deactivate ChatCtrl
+
+skinparam ArrowColor Red
+ChatUI --> Sender: 6. Hiển thị tin nhắn
+
+' ===== THIẾT LẬP REALTIME =====
+skinparam ArrowColor DeepSkyBlue
+ChatUI -> ChatCtrl: 7. setupRealtime(conversationId)
+activate ChatCtrl
+
+skinparam ArrowColor DeepSkyBlue
+ChatCtrl -> Realtime: 8. channel('c:shortId')\n.onBroadcast('msg')\n.subscribe()
+activate Realtime
+
+skinparam ArrowColor Red
+Realtime --> ChatCtrl: 9. Channel subscribed
+deactivate Realtime
+
+skinparam ArrowColor Red
+ChatCtrl --> ChatUI: 10. Realtime ready
+deactivate ChatCtrl
+
+' ===== TYPING INDICATOR =====
+group Typing Indicator
+
+  skinparam ArrowColor DeepSkyBlue
+  Sender -> ChatUI: 11. Bắt đầu gõ tin nhắn
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatUI -> ChatCtrl: 12. updateTypingStatus(true)
+  activate ChatCtrl
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatCtrl -> TypingDB: 13. UPSERT typing_indicators\nSET is_typing = true
+  activate TypingDB
+  
+  skinparam ArrowColor Red
+  TypingDB --> ChatCtrl: 14. Updated
+  deactivate TypingDB
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatCtrl -> Realtime: 15. broadcast('typing', {user_id, is_typing})
+  activate Realtime
+  
+  skinparam ArrowColor Red
+  Realtime --> Receiver: 16. Typing event
+  
+  skinparam ArrowColor Red
+  Receiver -> Receiver: 17. Hiển thị "đang gõ..."
+  
+  deactivate Realtime
+  deactivate ChatCtrl
+
+end
+
+' ===== GỬI TIN NHẮN =====
+group Gửi tin nhắn
+
+  skinparam ArrowColor DeepSkyBlue
+  Sender -> ChatUI: 18. Nhập tin nhắn & Click 'Gửi'
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatUI -> ChatCtrl: 19. sendMessage(conversationId, text)
+  activate ChatCtrl
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatCtrl -> MsgDB: 20. INSERT INTO messages\n(conversation_id, sender_id, text)
+  activate MsgDB
+  
+  skinparam ArrowColor Red
+  MsgDB --> ChatCtrl: 21. Message created (message_id)
+  deactivate MsgDB
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatCtrl -> ConvDB: 22. UPDATE conversations\nSET updated_at = NOW()
+  activate ConvDB
+  
+  skinparam ArrowColor Red
+  ConvDB --> ChatCtrl: 23. Updated
+  deactivate ConvDB
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatCtrl -> Realtime: 24. broadcast('msg', {id: message_id})
+  activate Realtime
+  
+  note right of Realtime
+    Broadcast chỉ gửi message_id
+    để giảm payload size
+  end note
+  
+  skinparam ArrowColor Red
+  Realtime --> ChatCtrl: 25. Broadcast sent
+  
+  skinparam ArrowColor Red
+  ChatCtrl --> ChatUI: 26. Message sent
+  deactivate ChatCtrl
+  
+  skinparam ArrowColor Red
+  ChatUI --> Sender: 27. Hiển thị tin nhắn đã gửi
+
+end
+
+' ===== NHẬN TIN NHẮN =====
+group Nhận tin nhắn (Realtime)
+
+  skinparam ArrowColor Red
+  Realtime --> Receiver: 28. onBroadcast: {id: message_id}
+  deactivate Realtime
+  
+  skinparam ArrowColor DeepSkyBlue
+  Receiver -> ChatCtrl: 29. fetchMessage(message_id)
+  activate ChatCtrl
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatCtrl -> MsgDB: 30. SELECT * FROM messages\nWHERE id = message_id
+  activate MsgDB
+  
+  skinparam ArrowColor Red
+  MsgDB --> ChatCtrl: 31. Message data
+  deactivate MsgDB
+  
+  skinparam ArrowColor Red
+  ChatCtrl --> Receiver: 32. Message object
+  deactivate ChatCtrl
+  
+  skinparam ArrowColor Red
+  Receiver -> Receiver: 33. Cập nhật UI\n& Phát âm thanh thông báo
+
+end
+
+' ===== ĐÁNH DẤU ĐÃ ĐỌC =====
+group Đánh dấu đã đọc
+
+  skinparam ArrowColor DeepSkyBlue
+  Receiver -> ChatCtrl: 34. markAsRead(message_id)
+  activate ChatCtrl
+  
+  skinparam ArrowColor DeepSkyBlue
+  ChatCtrl -> MsgDB: 35. INSERT INTO message_reads\n(message_id, user_id)
+  activate MsgDB
+  
+  skinparam ArrowColor Red
+  MsgDB --> ChatCtrl: 36. Read recorded
+  deactivate MsgDB
+  
+  skinparam ArrowColor Red
+  ChatCtrl --> Receiver: 37. Success
+  deactivate ChatCtrl
+
+end
+
+deactivate ChatUI
+deactivate Sender
+deactivate Receiver
+
+@enduml

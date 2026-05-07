@@ -1,0 +1,215 @@
+@startuml Friend Management Sequence
+title Sequence Diagram - Quản lý bạn bè (Friend Management)
+
+hide footbox
+skinparam SequenceMessageAlign center
+skinparam ParticipantPadding 20
+
+skinparam actor {
+  BorderColor Black
+}
+skinparam boundary {
+  BorderColor Black
+}
+skinparam control {
+  BorderColor Black
+}
+skinparam entity {
+  BorderColor Black
+}
+
+actor "Người dùng" as User
+boundary ": FriendsScreen" as FriendUI
+boundary ": FriendRequestsScreen" as RequestUI
+control ": FriendService" as FriendCtrl
+entity ": friends" as FriendDB
+entity ": friend_requests" as RequestDB
+entity ": users" as UserDB
+
+activate User
+
+' ===== TẢI DANH SÁCH BẠN BÈ =====
+skinparam ArrowColor DeepSkyBlue
+User -> FriendUI: 1. Mở màn hình Friends
+activate FriendUI
+
+skinparam ArrowColor DeepSkyBlue
+FriendUI -> FriendCtrl: 2. getFriends()
+activate FriendCtrl
+
+skinparam ArrowColor DeepSkyBlue
+FriendCtrl -> FriendDB: 3. SELECT friends\nWHERE user_id = current_user
+activate FriendDB
+
+skinparam ArrowColor DeepSkyBlue
+FriendDB -> UserDB: 4. JOIN users\nON friend_id
+activate UserDB
+
+skinparam ArrowColor Red
+UserDB --> FriendDB: 5. User info
+deactivate UserDB
+
+skinparam ArrowColor Red
+FriendDB --> FriendCtrl: 6. List<Friend>
+deactivate FriendDB
+
+skinparam ArrowColor Red
+FriendCtrl --> FriendUI: 7. Friends data
+deactivate FriendCtrl
+
+skinparam ArrowColor Red
+FriendUI --> User: 8. Hiển thị danh sách bạn bè
+
+' ===== GỬI LỜI MỜI KẾT BẠN =====
+loop Quản lý bạn bè
+
+  alt Gửi lời mời kết bạn
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> FriendUI: 9. Click 'Thêm bạn'
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendUI -> FriendCtrl: 10. getFriendSuggestions()
+    activate FriendCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendCtrl -> UserDB: 11. CALL get_friend_suggestions()
+    activate UserDB
+    
+    skinparam ArrowColor Red
+    UserDB --> FriendCtrl: 12. List<UserSuggestion>
+    deactivate UserDB
+    
+    skinparam ArrowColor Red
+    FriendCtrl --> FriendUI: 13. Suggestions data
+    deactivate FriendCtrl
+    
+    skinparam ArrowColor Red
+    FriendUI --> User: 14. Hiển thị gợi ý kết bạn
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> FriendUI: 15. Chọn người dùng & Click 'Gửi lời mời'
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendUI -> FriendCtrl: 16. sendFriendRequest(receiverId)
+    activate FriendCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendCtrl -> RequestDB: 17. INSERT INTO friend_requests\n(sender_id, receiver_id, status)
+    activate RequestDB
+    
+    skinparam ArrowColor Red
+    RequestDB --> FriendCtrl: 18. Request created
+    deactivate RequestDB
+    
+    skinparam ArrowColor Red
+    FriendCtrl --> FriendUI: 19. Success
+    deactivate FriendCtrl
+    
+    skinparam ArrowColor Red
+    FriendUI --> User: 20. Thông báo: Đã gửi lời mời
+    
+  else Chấp nhận lời mời kết bạn
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> FriendUI: 9. Click 'Lời mời kết bạn'
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendUI -> RequestUI: 10. Chuyển sang FriendRequestsScreen
+    deactivate FriendUI
+    activate RequestUI
+    
+    skinparam ArrowColor DeepSkyBlue
+    RequestUI -> FriendCtrl: 11. getPendingRequests()
+    activate FriendCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendCtrl -> RequestDB: 12. SELECT * FROM friend_requests\nWHERE receiver_id = current_user\nAND status = 'pending'
+    activate RequestDB
+    
+    skinparam ArrowColor Red
+    RequestDB --> FriendCtrl: 13. List<FriendRequest>
+    deactivate RequestDB
+    
+    skinparam ArrowColor Red
+    FriendCtrl --> RequestUI: 14. Requests data
+    deactivate FriendCtrl
+    
+    skinparam ArrowColor Red
+    RequestUI --> User: 15. Hiển thị danh sách lời mời
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> RequestUI: 16. Click 'Chấp nhận'
+    
+    skinparam ArrowColor DeepSkyBlue
+    RequestUI -> FriendCtrl: 17. acceptFriendRequest(requestId)
+    activate FriendCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendCtrl -> RequestDB: 18. UPDATE friend_requests\nSET status = 'accepted'
+    activate RequestDB
+    
+    skinparam ArrowColor Red
+    RequestDB --> FriendCtrl: 19. Updated
+    
+    note right of RequestDB
+      Trigger: create_bidirectional_friendship()
+      Tự động tạo 2 bản ghi trong friends
+    end note
+    
+    skinparam ArrowColor DeepSkyBlue
+    RequestDB -> FriendDB: 20. INSERT INTO friends\n(user_id, friend_id) x2
+    activate FriendDB
+    
+    skinparam ArrowColor Red
+    FriendDB --> RequestDB: 21. Friendship created
+    deactivate FriendDB
+    deactivate RequestDB
+    
+    skinparam ArrowColor Red
+    FriendCtrl --> RequestUI: 22. Success
+    deactivate FriendCtrl
+    
+    skinparam ArrowColor Red
+    RequestUI --> User: 23. Thông báo: Đã chấp nhận
+    deactivate RequestUI
+    activate FriendUI
+    
+  else Xóa bạn bè
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> FriendUI: 9. Chọn bạn bè & Click 'Xóa'
+    
+    skinparam ArrowColor Red
+    FriendUI --> User: 10. Xác nhận xóa?
+    
+    skinparam ArrowColor DeepSkyBlue
+    User -> FriendUI: 11. Xác nhận
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendUI -> FriendCtrl: 12. removeFriend(friendId)
+    activate FriendCtrl
+    
+    skinparam ArrowColor DeepSkyBlue
+    FriendCtrl -> FriendDB: 13. DELETE FROM friends\nWHERE (user_id, friend_id)\nIN both directions
+    activate FriendDB
+    
+    skinparam ArrowColor Red
+    FriendDB --> FriendCtrl: 14. Deleted
+    deactivate FriendDB
+    
+    skinparam ArrowColor Red
+    FriendCtrl --> FriendUI: 15. Success
+    deactivate FriendCtrl
+    
+    skinparam ArrowColor Red
+    FriendUI --> User: 16. Thông báo: Đã xóa bạn bè
+    
+  end
+  
+end
+
+deactivate FriendUI
+deactivate User
+
+@enduml

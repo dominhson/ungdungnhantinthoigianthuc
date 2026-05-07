@@ -1,0 +1,25 @@
+@startuml All Activity Diagrams
+!theme vibrant
+title Tổng hợp tất cả Sơ đồ hoạt động - Realtime Chat App
+
+' This file includes all activity diagrams for the Realtime Chat App
+' Use this to generate a complete documentation
+
+!include 01_authentication_flow.puml
+newpage
+
+!include 02_friend_management_flow.puml
+newpage
+
+!include 03_realtime_chat_flow.puml
+newpage
+
+!include 04_online_status_flow.puml
+newpage
+
+!include 05_group_chat_flow.puml
+newpage
+
+!include 06_media_handling_flow.puml
+
+@enduml

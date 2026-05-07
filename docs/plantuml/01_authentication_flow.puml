@@ -1,0 +1,88 @@
+@startuml Authentication Flow
+!theme vibrant
+title Sơ đồ hoạt động 1: Xác thực người dùng (Authentication Flow)
+
+|Người dùng|
+start
+:Mở ứng dụng;
+
+|Hệ thống|
+if (Đã đăng nhập?) then (Có)
+  :Hiển thị danh sách chat;
+  stop
+else (Không)
+  :Hiển thị màn hình Welcome;
+endif
+
+|Người dùng|
+if (Chọn hành động) then (Đăng nhập)
+  |#LightBlue|Đăng nhập|
+  :Nhập email và password;
+  
+  |Hệ thống|
+  :Kiểm tra thông tin;
+  :Gọi Supabase Auth API;
+  :supabase.auth.signInWithPassword();
+  
+  if (Đăng nhập thành công?) then (Có)
+    #LightGreen:Đăng nhập thành công;
+  else (Không)
+    #Pink:Hiển thị lỗi đăng nhập;
+    stop
+  endif
+  
+else (Đăng ký)
+  |#LightCoral|Đăng ký|
+  :Nhập email, password, tên;
+  
+  |Hệ thống|
+  :Kiểm tra thông tin;
+  :Gọi Supabase Auth API;
+  :supabase.auth.signUp();
+  
+  :Tạo profile trong bảng users;
+  note right
+    INSERT INTO users (
+      id, email, full_name,
+      created_at
+    ) VALUES (...)
+  end note
+  
+  if (Đăng ký thành công?) then (Có)
+    #LightGreen:Đăng ký thành công;
+  else (Không)
+    #Pink:Hiển thị lỗi đăng ký;
+    stop
+  endif
+endif
+
+|#Lavender|Post-Authentication|
+:Cập nhật trạng thái online;
+note right
+  UPDATE users 
+  SET is_online = true,
+      last_seen = NOW()
+  WHERE id = auth.uid()
+end note
+
+:Khởi tạo kết nối Realtime;
+note right
+  - WebSocket connection
+  - Subscribe channels
+  - Setup heartbeat timer
+end note
+
+:Hiển thị danh sách chat;
+
+stop
+
+legend right
+  |= Màu sắc |= Ý nghĩa |
+  | <#LightBlue> | Luồng đăng nhập |
+  | <#LightCoral> | Luồng đăng ký |
+  | <#Lavender> | Xử lý sau xác thực |
+  | <#LightGreen> | Thành công |
+  | <#Pink> | Lỗi |
+endlegend
+
+@enduml

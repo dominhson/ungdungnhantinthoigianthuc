@@ -1,0 +1,79 @@
+@startuml Authentication Activity Diagram
+!theme plain
+title Sơ đồ hoạt động: Xác thực người dùng
+
+|Người dùng|
+start
+:Mở ứng dụng;
+
+|Hệ thống|
+:Kiểm tra trạng thái đăng nhập;
+
+if (Đã đăng nhập?) then (Có)
+  :Hiển thị danh sách chat;
+  stop
+else (Không)
+  :Hiển thị màn hình Welcome;
+endif
+
+|Người dùng|
+if (Chọn hành động) then (Đăng nhập)
+  
+  |Người dùng|
+  :Nhấn "Đăng nhập";
+  
+  |Hệ thống|
+  :Hiển thị form đăng nhập;
+  
+  |Người dùng|
+  :Nhập email và password;
+  :Nhấn "Xác nhận";
+  
+  |Hệ thống|
+  :Xác thực thông tin;
+  
+  if (Thông tin hợp lệ?) then (Có)
+    :Tạo session;
+    :Cập nhật trạng thái online;
+    :Chuyển đến trang chủ;
+  else (Không)
+    :Thông báo lỗi;
+    stop
+  endif
+  
+else (Đăng ký)
+  
+  |Người dùng|
+  :Nhấn "Đăng ký";
+  
+  |Hệ thống|
+  :Hiển thị form đăng ký;
+  
+  |Người dùng|
+  :Nhập thông tin cá nhân;
+  :Nhấn "Xác nhận";
+  
+  |Hệ thống|
+  :Validate dữ liệu;
+  
+  if (Dữ liệu hợp lệ?) then (Có)
+    :Gửi OTP qua email;
+    
+    |Người dùng|
+    :Nhập mã OTP;
+    
+    |Hệ thống|
+    :Xác thực OTP;
+    :Tạo tài khoản;
+    :Cập nhật trạng thái online;
+    :Thông báo thành công;
+  else (Không)
+    :Thông báo lỗi;
+    stop
+  endif
+  
+endif
+
+stop
+
+@enduml

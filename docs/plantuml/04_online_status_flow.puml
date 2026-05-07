@@ -1,0 +1,226 @@
+@startuml Online Status Flow
+!theme vibrant
+title Sơ đồ hoạt động 4: Quản lý trạng thái Online/Offline
+
+|Người dùng|
+start
+:Đăng nhập thành công;
+
+|Hệ thống|
+:Khởi tạo trạng thái;
+#LightGreen:Update is_online = true;
+note right
+  UPDATE users
+  SET is_online = true,
+      last_seen = NOW()
+  WHERE id = auth.uid();
+end note
+
+:Ghi nhận thời gian đăng nhập;
+
+|#Lavender|Heartbeat Mechanism|
+:Bắt đầu Heartbeat Timer;
+note right
+  Timer.periodic(
+    Duration(seconds: 30),
+    (timer) => sendHeartbeat()
+  );
+end note
+
+fork
+  |#LightBlue|Heartbeat Loop|
+  repeat
+    :Chờ 30 giây;
+    
+    if (Kết nối còn hoạt động?) then (Có)
+      :Gửi heartbeat signal;
+      
+      :Update last_seen = NOW();
+      note right
+        UPDATE users
+        SET last_seen = NOW(),
+            is_online = true
+        WHERE id = auth.uid();
+      end note
+      
+      :Giữ is_online = true;
+      
+      #Yellow:Broadcast trạng thái online;
+      note right
+        // Realtime broadcast
+        channel.sendBroadcastMessage(
+          event: 'status',
+          payload: {
+            'user_id': userId,
+            'is_online': true
+          }
+        );
+      end note
+      
+      :Thông báo cho bạn bè;
+      
+    else (Không)
+      |#Pink|Mất kết nối|
+      :Phát hiện mất kết nối;
+      
+      #Pink:Update is_online = false;
+      note right
+        UPDATE users
+        SET is_online = false,
+            last_seen = NOW()
+        WHERE id = auth.uid();
+      end note
+      
+      :Ghi nhận last_seen;
+      
+      :Broadcast trạng thái offline;
+      :Thông báo cho bạn bè;
+      
+      |#LightCoral|Reconnection|
+      repeat
+        :Chờ 5 giây;
+        :Thử kết nối lại;
+        
+        if (Kết nối thành công?) then (Có)
+          #LightGreen:Update is_online = true;
+          :Khôi phục Heartbeat Timer;
+          break
+        else (Không)
+          :Tiếp tục chờ;
+        endif
+      repeat while (Tiếp tục thử?) is (Có)
+      ->Không;
+      stop
+    endif
+    
+  repeat while (App đang chạy?) is (Có)
+  ->Không;
+  
+fork again
+  |#LightYellow|Friend Status Subscription|
+  :Subscribe trạng thái bạn bè;
+  note right
+    supabase
+      .channel('friend_status_changes')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.update,
+        schema: 'public',
+        table: 'users',
+        callback: (payload) {
+          updateFriendStatus(payload);
+        }
+      )
+      .subscribe();
+  end note
+  
+  repeat
+    :Lắng nghe Postgres Changes;
+    
+    if (Nhận update?) then (Có)
+      :Kiểm tra payload;
+      
+      if (Là bạn bè?) then (Có)
+        :Cập nhật UI trạng thái bạn bè;
+        
+        if (is_online = true) then (Có)
+          #LightGreen:Hiển thị chấm xanh 🟢;
+          :Hiển thị "Đang hoạt động";
+        else (Không)
+          #Gray:Hiển thị chấm xám ⚫;
+          :Tính thời gian từ last_seen;
+          
+          if (< 1 phút) then (Có)
+            :Hiển thị "Vừa hoạt động";
+          elseif (< 60 phút) then (Có)
+            :Hiển thị "Hoạt động X phút trước";
+          elseif (< 24 giờ) then (Có)
+            :Hiển thị "Hoạt động X giờ trước";
+          else (> 24 giờ)
+            :Hiển thị "Hoạt động hôm qua";
+          endif
+        endif
+        
+        :Sắp xếp lại danh sách;
+        note right
+          // Bạn online lên đầu
+          friends.sort((a, b) {
+            if (a.isOnline && !b.isOnline) 
+              return -1;
+            if (!a.isOnline && b.isOnline) 
+              return 1;
+            return 0;
+          });
+        end note
+        
+      else (Không)
+        :Bỏ qua update;
+      endif
+    else (Không)
+      :Tiếp tục lắng nghe;
+    endif
+    
+  repeat while (App đang chạy?) is (Có)
+  ->Không;
+  
+end fork
+
+|Người dùng|
+if (Đăng xuất thủ công?) then (Có)
+  |#Pink|Manual Logout|
+  :Nhấn nút đăng xuất;
+  
+  |Hệ thống|
+  :Dừng Heartbeat Timer;
+  
+  #Pink:Update is_online = false;
+  note right
+    UPDATE users
+    SET is_online = false,
+        last_seen = NOW()
+    WHERE id = auth.uid();
+  end note
+  
+  :Unsubscribe tất cả channels;
+  note right
+    await supabase.removeAllChannels();
+  end note
+  
+  :Xóa session;
+  note right
+    await supabase.auth.signOut();
+  end note
+  
+  :Chuyển về màn hình đăng nhập;
+  
+else (Không)
+  :App tiếp tục chạy;
+endif
+
+stop
+
+legend right
+  |= Màu sắc |= Ý nghĩa |
+  | <#LightBlue> | Heartbeat loop |
+  | <#LightYellow> | Friend status subscription |
+  | <#LightGreen> | Online status |
+  | <#Pink> | Offline/Disconnect |
+  | <#LightCoral> | Reconnection |
+  | <#Gray> | Offline display |
+  | <#Yellow> | Broadcast event |
+  | <#Lavender> | Background process |
+endlegend
+
+note bottom
+  **Heartbeat Mechanism:**
+  - Timer chạy mỗi 30 giây
+  - Update last_seen để duy trì online status
+  - Phát hiện disconnect qua timeout
+  - Tự động reconnect khi có mạng trở lại
+  
+  **Tối ưu hóa:**
+  - App ở background: Giảm tần suất xuống 60s
+  - Low battery mode: Tạm dừng heartbeat
+  - Airplane mode: Dừng heartbeat, auto reconnect
+end note
+
+@enduml

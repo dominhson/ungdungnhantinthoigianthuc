@@ -1,1 +1,6 @@
-{}
+{
+    "csharp-dev-tools.roslyn.projectOrSolutionFiles": [
+        "c:\\Users\\Admin\\OneDrive\\Desktop\\TA\\build\\windows\\x64\\flutter_reminder_app.sln"
+    ],
+    "dotrush.roslyn.projectOrSolutionFiles": []
+}

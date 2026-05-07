@@ -1,0 +1,203 @@
+@startuml Realtime_Chat_UseCase
+!theme plain
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecaseBackgroundColor WhiteSmoke
+skinparam usecaseBorderColor Black
+skinparam actorBorderColor Black
+skinparam rectangleBorderColor Black
+
+title Use Case Diagram - Realtime Chat Application\n(Flutter + Supabase)
+
+' ========== ACTORS ==========
+actor "Người dùng\nchưa đăng ký" as Guest #LightBlue
+actor "Người dùng\nđã đăng ký" as User #LightGreen
+actor "Hệ thống\nSupabase" as System #LightYellow
+
+' Actor relationship
+User -up-|> Guest
+
+' ========== SYSTEM BOUNDARY ==========
+rectangle "Realtime Chat Application" {
+  
+  ' ========== AUTHENTICATION ==========
+  package "Xác thực & Tài khoản" #LightCyan {
+    usecase "UC01: Đăng ký\ntài khoản" as UC01
+    usecase "UC02: Đăng nhập" as UC02 #LightGray
+    usecase "UC03: Đăng xuất" as UC03
+    usecase "UC04: Quản lý\nProfile" as UC04
+  }
+  
+  ' ========== FRIENDS MANAGEMENT ==========
+  package "Quản lý Bạn bè" #LightGreen {
+    usecase "UC05: Tìm kiếm\nngười dùng" as UC05
+    usecase "UC06: Gửi lời mời\nkết bạn" as UC06
+    usecase "UC07: Quản lý\nlời mời kết bạn" as UC07
+    usecase "UC08: Xem danh sách\nbạn bè" as UC08
+    usecase "UC09: Xóa bạn bè" as UC09
+    usecase "UC10: Xem gợi ý\nkết bạn" as UC10
+  }
+  
+  ' ========== DIRECT MESSAGING ==========
+  package "Nhắn tin 1-1" #LightYellow {
+    usecase "UC11: Xem danh sách\ncuộc trò chuyện" as UC11
+    usecase "UC12: Bắt đầu\ncuộc trò chuyện mới" as UC12
+    usecase "UC13: Gửi tin nhắn\nvăn bản" as UC13
+    usecase "UC14: Gửi tin nhắn\nhình ảnh" as UC14
+    usecase "UC15: Gửi tin nhắn\nfile" as UC15
+    usecase "UC16: Xem tin nhắn" as UC16
+    usecase "UC17: Xóa tin nhắn" as UC17
+    usecase "UC18: Tìm kiếm\ntin nhắn" as UC18
+  }
+  
+  ' ========== GROUP CHAT ==========
+  package "Nhóm Chat" #LightPink {
+    usecase "UC19: Tạo nhóm chat" as UC19
+    usecase "UC20: Xem danh sách\nnhóm" as UC20
+    usecase "UC21: Gửi tin nhắn\ntrong nhóm" as UC21
+    usecase "UC22: Quản lý\nthành viên nhóm" as UC22
+    usecase "UC23: Xem thông tin\nnhóm" as UC23
+  }
+  
+  ' ========== REALTIME & SYSTEM ==========
+  package "Realtime & Hệ thống" #LightGray {
+    usecase "UC24: Cập nhật\ntrạng thái online" as UC24
+    usecase "UC25: Nhận tin nhắn\nrealtime" as UC25
+    usecase "UC26: Nhận thông báo\nlời mời kết bạn" as UC26
+  }
+  
+  ' ========== SETTINGS ==========
+  package "Cài đặt" #LightSalmon {
+    usecase "UC27: Cài đặt\nứng dụng" as UC27
+  }
+}
+
+' ========== GUEST USER CONNECTIONS ==========
+Guest --> UC01
+
+' ========== REGISTERED USER CONNECTIONS ==========
+' Authentication
+User --> UC02
+User --> UC03
+User --> UC04
+
+' Friends
+User --> UC05
+User --> UC06
+User --> UC07
+User --> UC08
+User --> UC09
+User --> UC10
+
+' Direct Messaging
+User --> UC11
+User --> UC12
+User --> UC13
+User --> UC14
+User --> UC15
+User --> UC16
+User --> UC17
+User --> UC18
+
+' Group Chat
+User --> UC19
+User --> UC20
+User --> UC21
+User --> UC22
+User --> UC23
+
+' Settings
+User --> UC27
+
+' ========== SYSTEM CONNECTIONS ==========
+System --> UC24
+System --> UC25
+System --> UC26
+
+' ========== INCLUDE RELATIONSHIPS ==========
+' All features require login
+UC04 .> UC02 : <<include>>
+UC05 .> UC02 : <<include>>
+UC06 .> UC02 : <<include>>
+UC07 .> UC02 : <<include>>
+UC08 .> UC02 : <<include>>
+UC09 .> UC02 : <<include>>
+UC10 .> UC02 : <<include>>
+UC11 .> UC02 : <<include>>
+UC12 .> UC02 : <<include>>
+UC13 .> UC02 : <<include>>
+UC16 .> UC02 : <<include>>
+UC17 .> UC02 : <<include>>
+UC18 .> UC02 : <<include>>
+UC19 .> UC02 : <<include>>
+UC20 .> UC02 : <<include>>
+UC21 .> UC02 : <<include>>
+UC22 .> UC02 : <<include>>
+UC23 .> UC02 : <<include>>
+UC27 .> UC02 : <<include>>
+
+' Login includes update online status
+UC02 .> UC24 : <<include>>
+
+' Logout includes update offline status
+UC03 .> UC24 : <<include>>
+
+' Send friend request includes search
+UC06 .> UC05 : <<include>>
+
+' Start new conversation includes view friends
+UC12 .> UC08 : <<include>>
+
+' ========== EXTEND RELATIONSHIPS ==========
+' Image and file messages extend text message
+UC14 ..> UC13 : <<extend>>
+UC15 ..> UC13 : <<extend>>
+
+' ========== NOTES ==========
+note right of System
+  Supabase Backend:
+  - PostgreSQL Database
+  - Realtime (WebSocket)
+  - Authentication
+  - Storage
+end note
+
+note left of UC02
+  Core use case
+  Required for most features
+end note
+
+note bottom of UC10
+  Smart algorithm:
+  Based on mutual friends
+  Function: get_friend_suggestions()
+end note
+
+note bottom of UC07
+  Trigger: on_friend_request_accepted
+  Auto creates bidirectional friendship
+end note
+
+note bottom of UC25
+  WebSocket connection
+  Instant message delivery
+end note
+
+' ========== LEGEND ==========
+legend bottom left
+  **Actors:**
+  - Guest User: Chưa đăng ký
+  - Registered User: Đã đăng ký
+  - Supabase System: Backend tự động
+  
+  **Packages:**
+  - 6 nhóm chức năng chính
+  - 27 use cases tổng cộng
+  
+  **Tech Stack:**
+  - Frontend: Flutter 3.5.0
+  - Backend: Supabase (PostgreSQL + Realtime)
+  - Storage: Supabase Storage
+endlegend
+
+@enduml

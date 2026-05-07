@@ -1,0 +1,118 @@
+@startuml Media Handling Activity Diagram
+!theme plain
+title Sơ đồ hoạt động: Xử lý Media
+
+|Người dùng|
+start
+:Nhấn "Gửi media";
+
+|Hệ thống|
+:Hiển thị menu chọn loại;
+
+|Người dùng|
+:Chọn loại media;
+
+if (Loại media) then (Ảnh)
+  
+  |Người dùng|
+  if (Nguồn) then (Camera)
+    :Chụp ảnh;
+  else (Thư viện)
+    :Chọn ảnh;
+  endif
+  
+  |Hệ thống|
+  :Validate ảnh;
+  
+  if (Hợp lệ?) then (Có)
+    :Nén ảnh (quality 85%);
+    :Tạo thumbnail (300x300);
+    :Upload lên Storage;
+  else (Không)
+    :Thông báo lỗi: Ảnh quá lớn (>10MB);
+    stop
+  endif
+  
+elseif (Video) then
+  
+  |Người dùng|
+  if (Nguồn) then (Quay)
+    :Quay video;
+  else (Thư viện)
+    :Chọn video;
+  endif
+  
+  |Hệ thống|
+  :Validate video;
+  
+  if (Hợp lệ?) then (Có)
+    :Nén video;
+    :Trích xuất thumbnail;
+    :Lấy thời lượng;
+    :Upload lên Storage;
+  else (Không)
+    :Thông báo lỗi: Video quá lớn (>100MB);
+    stop
+  endif
+  
+elseif (Audio) then
+  
+  |Người dùng|
+  if (Nguồn) then (Ghi âm)
+    :Bắt đầu ghi âm;
+    :Hiển thị UI ghi âm;
+    :Dừng ghi âm;
+  else (Chọn file)
+    :Chọn file audio;
+  endif
+  
+  |Hệ thống|
+  :Validate audio;
+  
+  if (Hợp lệ?) then (Có)
+    :Lấy thời lượng;
+    :Upload lên Storage;
+  else (Không)
+    :Thông báo lỗi: Audio không hợp lệ;
+    stop
+  endif
+  
+else (File)
+  
+  |Người dùng|
+  :Chọn file;
+  
+  |Hệ thống|
+  :Validate file;
+  
+  if (Hợp lệ?) then (Có)
+    :Lấy thông tin file;
+    :Upload lên Storage;
+  else (Không)
+    :Thông báo lỗi: File quá lớn (>50MB);
+    stop
+  endif
+  
+endif
+
+|Hệ thống|
+:Generate unique filename;
+:Xác định folder (images/videos/audios/files);
+:Hiển thị progress bar;
+:Upload lên Supabase Storage;
+
+if (Upload thành công?) then (Có)
+  :Lấy public URL;
+  :Tạo metadata;
+  :Insert message với media_url;
+  :Broadcast tin nhắn;
+  :Thông báo thành công;
+  :Hiển thị trong chat;
+else (Không)
+  :Thông báo lỗi upload;
+  stop
+endif
+
+stop
+
+@enduml

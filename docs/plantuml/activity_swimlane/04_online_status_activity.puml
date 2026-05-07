@@ -1,0 +1,70 @@
+@startuml Online Status Activity Diagram
+!theme plain
+title Sơ đồ hoạt động: Quản lý trạng thái Online/Offline
+
+|Người dùng|
+start
+:Đăng nhập thành công;
+
+|Hệ thống|
+:Cập nhật is_online = true;
+:Ghi nhận thời gian đăng nhập;
+:Bắt đầu Heartbeat Timer (30s);
+
+repeat
+  |Hệ thống|
+  :Chờ 30 giây;
+  
+  if (Kết nối còn hoạt động?) then (Có)
+    :Gửi heartbeat signal;
+    :Update last_seen = NOW();
+    :Giữ is_online = true;
+    :Broadcast trạng thái online;
+    
+    |Bạn bè|
+    :Nhận update;
+    :Hiển thị chấm xanh 🟢;
+    
+  else (Không)
+    |Hệ thống|
+    :Phát hiện mất kết nối;
+    :Update is_online = false;
+    :Ghi nhận last_seen;
+    :Broadcast trạng thái offline;
+    
+    |Bạn bè|
+    :Nhận update;
+    :Hiển thị chấm xám ⚫;
+    :Hiển thị "Hoạt động X phút trước";
+    
+    |Hệ thống|
+    repeat
+      :Chờ 5 giây;
+      :Thử kết nối lại;
+      
+      if (Kết nối thành công?) then (Có)
+        :Update is_online = true;
+        :Khôi phục Heartbeat Timer;
+        break
+      else (Không)
+        :Tiếp tục chờ;
+      endif
+      
+    repeat while (Tiếp tục thử?) is (Có)
+    
+  endif
+  
+repeat while (App đang chạy?) is (Có)
+
+|Người dùng|
+:Đăng xuất;
+
+|Hệ thống|
+:Dừng Heartbeat Timer;
+:Update is_online = false;
+:Unsubscribe tất cả channels;
+:Xóa session;
+
+stop
+
+@enduml

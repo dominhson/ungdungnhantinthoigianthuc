@@ -1,0 +1,224 @@
+@startuml Media Handling Flow
+!theme vibrant
+title Sơ đồ hoạt động 6: Xử lý Media (Media Handling Flow)
+
+|Người dùng|
+start
+:Muốn gửi media;
+
+if (Chọn loại media) then (Ảnh)
+  |#LightBlue|Gửi ảnh|
+  
+  if (Chọn nguồn) then (Camera)
+    :Mở camera;
+    :Chụp ảnh;
+  else (Thư viện)
+    :Mở thư viện ảnh;
+    :Chọn ảnh;
+  endif
+  
+  |Hệ thống|
+  if (Kiểm tra ảnh) then (Hợp lệ)
+    :Nén ảnh nếu cần;
+    :Tạo thumbnail (300x300);
+    :Upload ảnh lên Storage;
+  else (Không hợp lệ)
+    #Pink:Hiển thị lỗi;
+    stop
+  endif
+  
+elseif (Video) then
+  |#LightCoral|Gửi video|
+  
+  if (Chọn nguồn) then (Camera)
+    :Quay video;
+  else (Thư viện)
+    :Chọn video;
+  endif
+  
+  |Hệ thống|
+  if (Kiểm tra video) then (Hợp lệ)
+    :Nén video nếu cần;
+    :Trích xuất thumbnail từ frame đầu;
+    :Lấy thời lượng video;
+    :Upload video lên Storage;
+  else (Không hợp lệ)
+    #Pink:Hiển thị lỗi;
+    stop
+  endif
+  
+elseif (Audio) then
+  |#LightYellow|Gửi audio|
+  
+  if (Chọn nguồn) then (Ghi âm)
+    :Bắt đầu ghi âm;
+    :Hiển thị UI với timer và waveform;
+    
+    |Người dùng|
+    if (Hành động) then (Dừng)
+      :Dừng ghi âm;
+    else (Hủy)
+      :Hủy ghi âm;
+      stop
+    endif
+    
+    |Hệ thống|
+    if (Kiểm tra audio) then (Hợp lệ)
+      :Lấy thời lượng audio;
+      :Upload audio lên Storage;
+    else (Không hợp lệ)
+      #Pink:Hiển thị lỗi;
+      stop
+    endif
+    
+  else (Chọn file)
+    :Chọn file audio;
+    :Lấy thời lượng audio;
+    :Upload audio lên Storage;
+  endif
+  
+else (File)
+  |#Lavender|Gửi file|
+  :Mở file picker;
+  :Chọn file;
+  
+  |Hệ thống|
+  if (Kiểm tra file) then (Hợp lệ)
+    :Lấy thông tin file;
+    note right
+      - filename
+      - size
+      - mime_type
+    end note
+    :Upload file lên Storage;
+  else (Không hợp lệ)
+    #Pink:Hiển thị lỗi;
+    stop
+  endif
+endif
+
+|#LightGreen|Upload Process|
+:Generate unique filename;
+note right
+  filename = 
+    '${userId}_${timestamp}_${random}.${ext}'
+end note
+
+:Xác định folder trong Storage;
+note right
+  - images/ cho ảnh
+  - videos/ cho video
+  - audios/ cho audio
+  - files/ cho file khác
+end note
+
+:Hiển thị progress bar;
+
+:Upload lên Supabase Storage;
+note right
+  await storage
+    .from('media')
+    .upload('$folder/$filename', file,
+      onProgress: (progress) {
+        updateProgressBar(progress);
+      }
+    );
+end note
+
+if (Upload thành công?) then (Có)
+  :Lấy public URL;
+  note right
+    final publicUrl = storage
+      .from('media')
+      .getPublicUrl('$folder/$filename');
+  end note
+  
+  :Tạo metadata;
+  
+  :Insert message vào database;
+  note right
+    INSERT INTO messages (
+      conversation_id, sender_id,
+      text, type, media_url, duration
+    ) VALUES (
+      conv_id, current_user,
+      '', 'image', public_url, null
+    );
+  end note
+  
+  :Broadcast tin nhắn qua Realtime;
+  
+  #LightGreen:Hiển thị thành công;
+  
+  :Hiển thị trong chat;
+  
+  if (Render media) then (Image)
+    :Hiển thị ảnh với thumbnail;
+    :Click để xem full size;
+  elseif (Video) then
+    :Hiển thị video player;
+    :Thumbnail + play button;
+  elseif (Audio) then
+    :Hiển thị audio player;
+    :Waveform + controls;
+  else (File)
+    :Hiển thị file card;
+    :Icon + tên + kích thước;
+  endif
+  
+else (Không)
+  #Pink:Hiển thị lỗi upload;
+  stop
+endif
+
+|Người dùng|
+if (Chọn hành động) then (Download)
+  |Hệ thống|
+  :Download media về máy;
+  :Lưu vào thiết bị;
+  #LightGreen:Hiển thị thành công;
+  
+elseif (Share) then
+  :Mở share sheet của OS;
+  :Share URL hoặc file;
+  
+else (Delete)
+  |Người dùng|
+  if (Xác nhận xóa?) then (Có)
+    |Hệ thống|
+    :Xóa khỏi Storage;
+    :Xóa/Update message record;
+    :Broadcast delete event;
+    #LightGreen:Hiển thị thành công;
+  else (Không)
+    :Hủy bỏ;
+  endif
+endif
+
+stop
+
+legend right
+  |= Màu sắc |= Ý nghĩa |
+  | <#LightBlue> | Gửi ảnh |
+  | <#LightCoral> | Gửi video |
+  | <#LightYellow> | Gửi audio |
+  | <#Lavender> | Gửi file |
+  | <#LightGreen> | Upload process |
+  | <#Pink> | Lỗi |
+endlegend
+
+note bottom
+  **Giới hạn:**
+  - Ảnh: 10MB, JPG/PNG/GIF/WEBP
+  - Video: 100MB, 5 phút, MP4/MOV/AVI
+  - Audio: 20MB, 10 phút, MP3/AAC/WAV
+  - File: 50MB, không cho phép .exe/.bat/.sh
+  
+  **Tối ưu hóa:**
+  - Compression trước khi upload
+  - Thumbnail generation
+  - Progressive upload (chunks)
+  - CDN caching
+end note
+
+@enduml

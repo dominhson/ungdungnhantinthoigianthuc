@@ -1,0 +1,108 @@
+<mxfile host="app.diagrams.net" agent="Kiro">
+  <diagram name="Lumine Chat UseCase" id="chat1">
+    <mxGraphModel dx="1571" dy="863" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="frame" parent="1" style="shape=umlFrame;whiteSpace=wrap;html=1;width=220;height=30;fontSize=16;fontStyle=1;" value="Lumine Chat Application" vertex="1">
+          <mxGeometry height="720" width="600" x="250" y="30" as="geometry" />
+        </mxCell>
+        <mxCell id="guest" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=12;" value="Guest User" vertex="1">
+          <mxGeometry height="100" width="50" x="100" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="user" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=12;" value="Registered&#xa;User" vertex="1">
+          <mxGeometry height="100" width="50" x="100" y="400" as="geometry" />
+        </mxCell>
+        <mxCell id="system" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=12;" value="Supabase&#xa;System" vertex="1">
+          <mxGeometry height="100" width="50" x="890" y="140" as="geometry" />
+        </mxCell>
+        <mxCell id="gen1" edge="1" parent="1" source="user" style="endArrow=block;endFill=0;html=1;strokeWidth=1;endSize=10;" value="">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="290" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="uc01" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Đăng ký" vertex="1">
+          <mxGeometry height="60" width="120" x="310" y="100" as="geometry" />
+        </mxCell>
+        <mxCell id="uc02" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;strokeWidth=3;" value="Đăng nhập" vertex="1">
+          <mxGeometry height="60" width="120" x="620" y="390" as="geometry" />
+        </mxCell>
+        <mxCell id="uc03" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Đăng xuất" vertex="1">
+          <mxGeometry height="60" width="120" x="335" y="280" as="geometry" />
+        </mxCell>
+        <mxCell id="uc04" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Quản lý&#xa;Profile" vertex="1">
+          <mxGeometry height="70" width="130" x="310" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="uc05" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Quản lý&#xa;Bạn bè" vertex="1">
+          <mxGeometry height="70" width="130" x="310" y="560" as="geometry" />
+        </mxCell>
+        <mxCell id="uc11" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Nhắn tin" vertex="1">
+          <mxGeometry height="70" width="130" x="330" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="uc19" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Nhóm Chat" vertex="1">
+          <mxGeometry height="70" width="130" x="305" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="uc27" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Cài đặt" vertex="1">
+          <mxGeometry height="70" width="130" x="310" y="660" as="geometry" />
+        </mxCell>
+        <mxCell id="uc24" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Cập nhật&#xa;trạng thái online" vertex="1">
+          <mxGeometry height="70" width="130" x="670" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="uc25" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Nhận tin nhắn&#xa;realtime" vertex="1">
+          <mxGeometry height="70" width="130" x="690" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="uc26" parent="1" style="ellipse;whiteSpace=wrap;html=1;fontSize=12;" value="Nhận thông báo&#xa;realtime" vertex="1">
+          <mxGeometry height="70" width="130" x="680" y="275" as="geometry" />
+        </mxCell>
+        <mxCell id="l1" edge="1" parent="1" source="guest" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc01" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l2" edge="1" parent="1" source="user" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc02" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l3" edge="1" parent="1" source="user" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc03" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l4" edge="1" parent="1" source="user" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc04" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l5" edge="1" parent="1" source="user" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc05" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l6" edge="1" parent="1" source="user" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc11" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l7" edge="1" parent="1" source="user" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc19" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l8" edge="1" parent="1" source="user" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc27" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l9" edge="1" parent="1" source="system" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc24" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l10" edge="1" parent="1" source="system" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc25" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="l11" edge="1" parent="1" source="system" style="endArrow=none;html=1;strokeWidth=1.5;" target="uc26" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc1" edge="1" parent="1" source="uc04" style="endArrow=open;dashed=1;html=1;strokeWidth=1.5;fontSize=10;" target="uc02" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc2" edge="1" parent="1" source="uc05" style="endArrow=open;dashed=1;html=1;strokeWidth=1.5;fontSize=10;" target="uc02" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc3" edge="1" parent="1" source="uc11" style="endArrow=open;dashed=1;html=1;strokeWidth=1.5;fontSize=10;" target="uc02" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc4" edge="1" parent="1" source="uc19" style="endArrow=open;dashed=1;html=1;strokeWidth=1.5;fontSize=10;" target="uc02" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="inc5" edge="1" parent="1" source="uc27" style="endArrow=open;dashed=1;html=1;strokeWidth=1.5;fontSize=10;" target="uc02" value="&amp;lt;&amp;lt;include&amp;gt;&amp;gt;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

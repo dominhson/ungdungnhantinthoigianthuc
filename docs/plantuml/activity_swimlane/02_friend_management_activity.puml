@@ -1,0 +1,93 @@
+@startuml Friend Management Activity Diagram
+!theme plain
+title Sơ đồ hoạt động: Quản lý bạn bè
+
+|Người dùng|
+start
+:Vào màn hình Friends;
+
+|Hệ thống|
+:Tải danh sách bạn bè;
+:Hiển thị danh sách;
+
+|Người dùng|
+switch (Chọn hành động)
+case (Thêm bạn)
+  
+  |Người dùng|
+  :Nhấn "Thêm bạn";
+  
+  |Hệ thống|
+  :Hiển thị gợi ý kết bạn;
+  note right
+    Dựa trên mutual friends
+  end note
+   
+  |Người dùng|
+  :Chọn người dùng;
+  :Nhấn "Gửi lời mời";
+  
+  |Hệ thống|
+  :Lưu lời mời kết bạn;
+  :Gửi thông báo;
+  :Thông báo thành công;
+  
+case (Xem lời mời)
+  
+  |Hệ thống|
+  :Tải lời mời kết bạn;
+  :Hiển thị danh sách lời mời;
+  
+  |Người dùng|
+  if (Chọn hành động) then (Chấp nhận)
+    
+    |Hệ thống|
+    :Cập nhật status = 'accepted';
+    :Tạo quan hệ bạn bè (2 chiều);
+    note right
+      Trigger tự động
+      create_bidirectional_friendship()
+    end note
+    :Gửi thông báo;
+    :Thông báo thành công;
+    
+  else (Từ chối)
+    
+    |Hệ thống|
+    :Cập nhật status = 'rejected';
+    :Thông báo thành công;
+    
+  endif
+  
+case (Xóa bạn)
+  
+  |Người dùng|
+  :Chọn bạn bè;
+  :Nhấn "Xóa";
+  
+  |Hệ thống|
+  :Xác nhận xóa?;
+  
+  |Người dùng|
+  if (Xác nhận?) then (Có)
+    
+    |Hệ thống|
+    :Xóa quan hệ bạn bè (2 chiều);
+    :Gửi thông báo;
+    :Thông báo thành công;
+    
+  else (Không)
+    :Hủy bỏ;
+  endif
+  
+case (Xem bạn online)
+  
+  |Hệ thống|
+  :Lọc bạn bè online;
+  :Hiển thị danh sách bạn online;
+  
+endswitch
+
+stop
+
+@enduml

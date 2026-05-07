@@ -1,0 +1,161 @@
+@startuml Friend Management Flow
+!theme vibrant
+title Sơ đồ hoạt động 2: Quản lý bạn bè (Friend Management Flow)
+
+|Người dùng|
+start
+:Vào màn hình Friends;
+
+|Hệ thống|
+:Tải danh sách bạn bè;
+:Query bảng friends với user_id;
+note right
+  SELECT f.*, u.*
+  FROM friends f
+  JOIN users u ON u.id = f.friend_id
+  WHERE f.user_id = current_user
+  ORDER BY u.is_online DESC, f.created_at DESC
+end note
+
+:Hiển thị danh sách bạn bè;
+
+|Người dùng|
+repeat
+  if (Chọn hành động) then (Thêm bạn)
+    |#LightBlue|Thêm bạn bè|
+    :Tìm kiếm người dùng;
+    
+    |Hệ thống|
+    :Gọi RPC get_friend_suggestions();
+    note right
+      SELECT u.*, COUNT(mutual) as mutual_count
+      FROM users u
+      WHERE u.id NOT IN (
+        -- Đã là bạn bè
+        SELECT friend_id FROM friends
+        WHERE user_id = current_user
+      )
+      AND u.id NOT IN (
+        -- Đã gửi/nhận request
+        SELECT receiver_id FROM friend_requests
+        WHERE sender_id = current_user
+      )
+      ORDER BY mutual_count DESC
+    end note
+    
+    :Hiển thị danh sách gợi ý;
+    
+    |Người dùng|
+    :Chọn người dùng;
+    
+    |Hệ thống|
+    :Gửi lời mời kết bạn;
+    note right
+      INSERT INTO friend_requests (
+        sender_id, receiver_id, status
+      ) VALUES (
+        current_user, selected_user, 'pending'
+      )
+    end note
+    
+    :Thông báo cho người nhận;
+    #LightGreen:Hiển thị thành công;
+    
+  elseif (Xem lời mời) then
+    |#LightCoral|Xem lời mời kết bạn|
+    
+    |Hệ thống|
+    :Tải lời mời kết bạn;
+    note right
+      SELECT fr.*, u.*
+      FROM friend_requests fr
+      JOIN users u ON u.id = fr.sender_id
+      WHERE fr.receiver_id = current_user
+      AND fr.status = 'pending'
+      ORDER BY fr.created_at DESC
+    end note
+    
+    :Hiển thị danh sách lời mời;
+    
+    |Người dùng|
+    if (Chọn hành động) then (Chấp nhận)
+      |Hệ thống|
+      :Chấp nhận lời mời;
+      :Update status = 'accepted';
+      
+      #Lavender:Trigger: create_bidirectional_friendship();
+      note right
+        -- Tự động tạo 2 bản ghi
+        INSERT INTO friends (user_id, friend_id)
+        VALUES (sender_id, receiver_id);
+        
+        INSERT INTO friends (user_id, friend_id)
+        VALUES (receiver_id, sender_id);
+      end note
+      
+      :Thông báo cho người gửi;
+      #LightGreen:Hiển thị thành công;
+      
+    else (Từ chối)
+      |Hệ thống|
+      :Từ chối lời mời;
+      :Update status = 'rejected';
+      #LightGreen:Hiển thị thành công;
+    endif
+    
+  elseif (Xóa bạn) then
+    |#Pink|Xóa bạn bè|
+    
+    |Người dùng|
+    if (Xác nhận xóa?) then (Không)
+      :Hủy bỏ;
+    else (Có)
+      |Hệ thống|
+      :Xóa bạn bè (cả 2 chiều);
+      note right
+        DELETE FROM friends
+        WHERE (user_id = current_user 
+               AND friend_id = selected_friend)
+        OR (user_id = selected_friend 
+            AND friend_id = current_user)
+      end note
+      
+      :Thông báo cho bạn bè;
+      #LightGreen:Hiển thị thành công;
+    endif
+    
+  else (Xem bạn online)
+    |#LightYellow|Xem bạn online|
+    
+    |Hệ thống|
+    :Lọc bạn bè online;
+    note right
+      SELECT f.*, u.*
+      FROM friends f
+      JOIN users u ON u.id = f.friend_id
+      WHERE f.user_id = current_user
+      AND u.is_online = true
+      ORDER BY u.last_seen DESC
+    end note
+    
+    :Hiển thị danh sách bạn online;
+  endif
+  
+  :Cập nhật danh sách bạn bè;
+  
+repeat while (Tiếp tục?) is (Có)
+->Không;
+
+stop
+
+legend right
+  |= Màu sắc |= Ý nghĩa |
+  | <#LightBlue> | Thêm bạn bè |
+  | <#LightCoral> | Quản lý lời mời |
+  | <#Pink> | Xóa bạn bè |
+  | <#LightYellow> | Xem bạn online |
+  | <#Lavender> | Database trigger |
+  | <#LightGreen> | Thành công |
+endlegend
+
+@enduml

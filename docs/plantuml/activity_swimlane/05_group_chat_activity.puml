@@ -1,0 +1,145 @@
+@startuml Group Chat Activity Diagram
+!theme plain
+title Sơ đồ hoạt động: Quản lý nhóm chat
+
+|Người dùng|
+start
+:Vào màn hình Groups;
+
+|Hệ thống|
+:Tải danh sách nhóm;
+:Hiển thị danh sách;
+
+|Người dùng|
+:Chọn hành động;
+
+if (Hành động) then (Tạo nhóm mới)
+  
+  |Người dùng|
+  :Nhấn "Tạo nhóm";
+  
+  |Hệ thống|
+  :Hiển thị form tạo nhóm;
+  
+  |Người dùng|
+  :Nhập tên nhóm;
+  :Nhập mô tả;
+  :Chọn avatar (tùy chọn);
+  :Chọn thành viên;
+  :Nhấn "Tạo";
+  
+  |Hệ thống|
+  if (Thông tin hợp lệ?) then (Có)
+    if (Có avatar?) then (Có)
+      :Upload avatar lên Storage;
+    endif
+    :Tạo bản ghi nhóm;
+    :Thêm creator (role = admin);
+    :Thêm các thành viên (role = member);
+    :Tạo tin nhắn hệ thống;
+    note right
+      "X đã tạo nhóm"
+    end note
+    :Gửi thông báo cho thành viên;
+    :Thông báo thành công;
+  else (Không)
+    :Thông báo lỗi;
+  endif
+  
+elseif (Xem thông tin nhóm) then
+  
+  |Người dùng|
+  :Chọn nhóm;
+  
+  |Hệ thống|
+  :Tải thông tin nhóm;
+  :Tải danh sách thành viên;
+  :Hiển thị thông tin;
+  
+  |Người dùng|
+  if (Chọn hành động) then (Thêm thành viên)
+    
+    |Hệ thống|
+    if (Là admin?) then (Có)
+      
+      |Người dùng|
+      :Chọn thành viên mới;
+      
+      |Hệ thống|
+      :Thêm vào nhóm;
+      :Tạo tin nhắn hệ thống;
+      :Gửi thông báo;
+      :Thông báo thành công;
+      
+    else (Không)
+      :Thông báo lỗi: Chỉ admin mới có quyền;
+    endif
+    
+  elseif (Xóa thành viên) then
+    
+    |Hệ thống|
+    if (Là admin?) then (Có)
+      
+      |Người dùng|
+      :Chọn thành viên để xóa;
+      :Xác nhận xóa;
+      
+      |Hệ thống|
+      :Xóa khỏi nhóm;
+      :Tạo tin nhắn hệ thống;
+      :Gửi thông báo;
+      :Thông báo thành công;
+      
+    else (Không)
+      :Thông báo lỗi: Chỉ admin mới có quyền;
+    endif
+    
+  elseif (Rời nhóm) then
+    
+    |Người dùng|
+    :Nhấn "Rời nhóm";
+    :Xác nhận;
+    
+    |Hệ thống|
+    if (Là admin duy nhất?) then (Không)
+      :Xóa khỏi nhóm;
+      :Tạo tin nhắn hệ thống;
+      :Gửi thông báo;
+      :Thông báo thành công;
+    else (Có)
+      :Thông báo lỗi: Cần chuyển quyền admin;
+    endif
+    
+  else (Xóa nhóm)
+    
+    |Hệ thống|
+    if (Là người tạo?) then (Có)
+      
+      |Người dùng|
+      :Xác nhận xóa nhóm;
+      
+      |Hệ thống|
+      :Xóa tất cả tin nhắn;
+      :Xóa tất cả participants;
+      :Xóa nhóm;
+      :Gửi thông báo cho tất cả;
+      :Thông báo thành công;
+      
+    else (Không)
+      :Thông báo lỗi: Chỉ người tạo mới có quyền;
+    endif
+    
+  endif
+  
+else (Mở chat nhóm)
+  
+  |Hệ thống|
+  :Mở màn hình chat nhóm;
+  :Tải tin nhắn;
+  :Thiết lập Realtime;
+  
+endif
+
+stop
+
+@enduml

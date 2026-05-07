@@ -1,0 +1,236 @@
+@startuml Realtime Chat Flow
+!theme vibrant
+title Sơ đồ hoạt động 3: Chat thời gian thực (Realtime Chat Flow)
+
+|Người dùng|
+start
+:Mở cuộc trò chuyện;
+
+|Hệ thống|
+if (Cuộc trò chuyện đã tồn tại?) then (Không)
+  #LightCoral:Tạo cuộc trò chuyện mới;
+  note right
+    INSERT INTO conversations (
+      created_at, updated_at
+    ) VALUES (NOW(), NOW())
+    RETURNING id;
+    
+    INSERT INTO conversation_participants (
+      conversation_id, user_id, joined_at
+    ) VALUES (conv_id, user1, NOW()),
+            (conv_id, user2, NOW());
+  end note
+else (Có)
+  :Tải cuộc trò chuyện;
+endif
+
+:Query tin nhắn;
+note right
+  SELECT m.*, u.full_name, u.avatar_url
+  FROM messages m
+  JOIN users u ON u.id = m.sender_id
+  WHERE m.conversation_id = current_conv
+  ORDER BY m.created_at ASC
+end note
+
+:Hiển thị tin nhắn;
+
+|#Lavender|Realtime Setup|
+:Thiết lập Realtime;
+:Tạo Broadcast Channel;
+note right
+  // Short topic: c:12345678
+  final shortId = conversationId
+    .replaceAll('-', '')
+    .substring(0, 8);
+  
+  channel = supabase
+    .channel('c:$shortId')
+    .onBroadcast(
+      event: 'msg',
+      callback: onMessage
+    )
+    .subscribe();
+end note
+
+:Cache channel để tái sử dụng;
+
+|Người dùng|
+repeat
+  if (Hành động) then (Gửi tin nhắn)
+    |#LightBlue|Gửi tin nhắn|
+    :Soạn tin nhắn;
+    
+    |Hệ thống|
+    if (Kiểm tra nội dung) then (Rỗng)
+      :Bỏ qua;
+    else (Hợp lệ)
+      :Chuẩn bị dữ liệu tin nhắn;
+      
+      :Insert vào bảng messages;
+      note right
+        INSERT INTO messages (
+          conversation_id, sender_id,
+          text, type, created_at
+        ) VALUES (
+          conv_id, current_user,
+          'Hello', 'text', NOW()
+        ) RETURNING id;
+      end note
+      
+      :Update conversations.updated_at;
+      
+      #Yellow:Broadcast qua channel;
+      note right
+        channel.sendBroadcastMessage(
+          event: 'msg',
+          payload: {'id': message_id}
+        );
+      end note
+      
+      |#LightGreen|Tất cả clients|
+      :Nhận broadcast;
+      :Fetch tin nhắn mới từ DB;
+      note right
+        SELECT m.*, u.*
+        FROM messages m
+        JOIN users u ON u.id = m.sender_id
+        WHERE m.id = received_message_id
+      end note
+      
+      :Cập nhật UI;
+      :Phát âm thanh thông báo;
+    endif
+    
+  elseif (Đang gõ) then
+    |#LightYellow|Typing Indicator|
+    :Bắt đầu gõ;
+    
+    |Hệ thống|
+    :Upsert typing_indicators;
+    note right
+      INSERT INTO typing_indicators (
+        conversation_id, user_id,
+        is_typing, updated_at
+      ) VALUES (
+        conv_id, current_user,
+        true, NOW()
+      )
+      ON CONFLICT (conversation_id, user_id)
+      DO UPDATE SET 
+        is_typing = true,
+        updated_at = NOW();
+    end note
+    
+    :Broadcast typing status;
+    
+    |Người khác|
+    :Hiển thị "đang gõ...";
+    
+    |Hệ thống|
+    :Chờ 3 giây;
+    if (Vẫn đang gõ?) then (Có)
+      :Tiếp tục hiển thị;
+    else (Không)
+      :Update is_typing = false;
+      :Ẩn "đang gõ...";
+    endif
+    
+  elseif (Gửi media) then
+    |#LightCoral|Gửi Media|
+    :Chọn ảnh/video/file;
+    
+    |Hệ thống|
+    :Upload lên Supabase Storage;
+    note right
+      // Generate unique filename
+      final filename = 
+        '${userId}_${timestamp}_${random}.${ext}';
+      
+      // Upload to bucket
+      await storage
+        .from('media')
+        .upload('images/$filename', file);
+    end note
+    
+    :Lấy public URL;
+    
+    :Insert message với media_url;
+    note right
+      INSERT INTO messages (
+        conversation_id, sender_id,
+        text, type, media_url
+      ) VALUES (
+        conv_id, current_user,
+        '', 'image', public_url
+      );
+    end note
+    
+    :Broadcast tin nhắn;
+    
+  elseif (Trả lời tin nhắn) then
+    |#Lavender|Reply Message|
+    :Chọn tin nhắn để trả lời;
+    :Hiển thị preview tin nhắn gốc;
+    :Soạn tin nhắn trả lời;
+    
+    |Hệ thống|
+    :Insert với reply_to_message_id;
+    note right
+      INSERT INTO messages (
+        conversation_id, sender_id,
+        text, reply_to_message_id
+      ) VALUES (
+        conv_id, current_user,
+        'Reply text', original_msg_id
+      );
+    end note
+    
+    :Broadcast tin nhắn;
+    
+  else (Đánh dấu đã đọc)
+    |#LightGreen|Mark as Read|
+    
+    |Hệ thống|
+    :Insert vào message_reads;
+    note right
+      INSERT INTO message_reads (
+        message_id, user_id, read_at
+      ) VALUES (
+        msg_id, current_user, NOW()
+      );
+    end note
+    
+    :Cập nhật unread_count;
+    note right
+      UPDATE conversation_participants
+      SET unread_count = 0
+      WHERE conversation_id = conv_id
+      AND user_id = current_user;
+    end note
+  endif
+  
+repeat while (Tiếp tục chat?) is (Có)
+->Không;
+
+|Người dùng|
+:Rời khỏi cuộc trò chuyện;
+
+|Hệ thống|
+:Unsubscribe channel;
+:Xóa khỏi cache;
+:Cập nhật last_seen;
+
+stop
+
+legend right
+  |= Màu sắc |= Ý nghĩa |
+  | <#LightBlue> | Gửi tin nhắn text |
+  | <#LightYellow> | Typing indicator |
+  | <#LightCoral> | Gửi media |
+  | <#Lavender> | Reply message |
+  | <#LightGreen> | Mark as read |
+  | <#Yellow> | Broadcast event |
+endlegend
+
+@enduml
